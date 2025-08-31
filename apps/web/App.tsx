@@ -314,6 +314,12 @@ export default function App() {
                 }
                 const teacher = school.teachers.find((t: Teacher) => t.loginCode === code);
                 if (teacher) {
+                    // FIX: Ensure teacher.assignments is always an object to prevent crashes.
+                    // This handles cases in mock mode where a new teacher might be created
+                    // without this property, causing an error on login.
+                    if (!teacher.assignments) {
+                        teacher.assignments = {};
+                    }
                     setSelectedSchoolId(school.id);
                     setCurrentTeacher(teacher);
                     setUserRole(UserRole.Teacher);
