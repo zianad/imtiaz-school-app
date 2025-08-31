@@ -1,16 +1,14 @@
 
 
+
 import React, { useState, useRef } from 'react';
-// Fix: Add School import
 import { Student, Note, Absence, School } from '../../../../packages/core/types';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface TeacherNotesFormProps {
-    // Fix: Add school, toggleDarkMode, isDarkMode props
     school: School;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
@@ -34,7 +32,7 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
-const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ students, notes, absences, onSave, onMarkAbsent, onBack, onLogout, onDeleteNote, onDeleteAbsence }) => {
+const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ school, toggleDarkMode, isDarkMode, students, notes, absences, onSave, onMarkAbsent, onBack, onLogout, onDeleteNote, onDeleteAbsence }) => {
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [observation, setObservation] = useState('');
     const [file, setFile] = useState<File | null>(null);
@@ -119,58 +117,64 @@ const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ students, notes, ab
     };
 
     return (
-        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 animate-fade-in relative">
-            <div className="absolute top-4 start-4 z-10">
-                <LanguageSwitcher />
+        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 animate-fade-in relative">
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                    {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
+                </div>
+                <div className="flex items-center gap-2">
+                    <LanguageSwitcher />
+                    <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+                </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">إدارة الملاحظات والغيابات</h1>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">إدارة الملاحظات والغيابات</h1>
             
             <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                     <h2 className="text-lg font-semibold text-gray-700 mb-2 text-center">الملاحظات المسجلة</h2>
-                     <div className="max-h-32 overflow-y-auto space-y-2 p-2 bg-gray-100 rounded-lg">
+                     <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2 text-center">الملاحظات المسجلة</h2>
+                     <div className="max-h-32 overflow-y-auto space-y-2 p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                         {notes.length > 0 ? (
                             notes.sort((a,b)=>b.date.getTime() - a.date.getTime()).map(note => (
-                                <div key={note.id} className="flex items-center justify-between bg-white p-2 rounded-lg shadow-sm">
-                                    <p className="text-sm text-gray-600 truncate flex-grow">
+                                <div key={note.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 truncate flex-grow">
                                         <span className={`inline-block w-2 h-2 rounded-full mr-2 ${note.status === 'pending' ? 'bg-yellow-400' : 'bg-green-500'}`}></span>
                                         {note.observation}
                                     </p>
                                     <button onClick={() => handleDeleteClick(note, 'note')} className="text-red-500 hover:text-red-700 font-bold px-2 text-sm flex-shrink-0">حذف</button>
                                 </div>
                             ))
-                        ) : <p className="text-gray-500 text-center py-4">لا توجد ملاحظات.</p>}
+                        ) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">لا توجد ملاحظات.</p>}
                      </div>
                 </div>
                  <div>
-                     <h2 className="text-lg font-semibold text-gray-700 mb-2 text-center">الغيابات المسجلة</h2>
-                     <div className="max-h-32 overflow-y-auto space-y-2 p-2 bg-gray-100 rounded-lg">
+                     <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2 text-center">الغيابات المسجلة</h2>
+                     <div className="max-h-32 overflow-y-auto space-y-2 p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                          {absences.length > 0 ? (
                             absences.sort((a,b)=>b.date.getTime() - a.date.getTime()).map(absence => (
-                                <div key={absence.id} className="flex items-center justify-between bg-white p-2 rounded-lg shadow-sm">
-                                    <span className="text-sm text-gray-600">{students.find(s=>s.id === absence.studentId)?.name} - {new Date(absence.date).toLocaleDateString('ar-DZ')}</span>
+                                <div key={absence.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                                    <span className="text-sm text-gray-600 dark:text-gray-300">{students.find(s=>s.id === absence.studentId)?.name} - {new Date(absence.date).toLocaleDateString('ar-DZ')}</span>
                                     <button onClick={() => handleDeleteClick(absence, 'absence')} className="text-red-500 hover:text-red-700 font-bold px-2 text-sm flex-shrink-0">حذف</button>
                                 </div>
                             ))
-                        ) : <p className="text-gray-500 text-center py-4">لا توجد غيابات.</p>}
+                        ) : <p className="text-gray-500 dark:text-gray-400 text-center py-4">لا توجد غيابات.</p>}
                      </div>
                 </div>
             </div>
 
-            <div className="space-y-4 border-t-2 border-dashed border-gray-300 pt-6">
-                 <h2 className="text-xl font-semibold text-gray-700 mb-2">إضافة جديدة</h2>
+            <div className="space-y-4 border-t-2 border-dashed border-gray-300 dark:border-gray-600 pt-6">
+                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">إضافة جديدة</h2>
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-gray-700">اختر التلاميذ:</h3>
-                        <button onClick={handleSelectAll} className="text-sm font-semibold text-blue-600 hover:underline">
+                        <h3 className="font-semibold text-gray-700 dark:text-gray-300">اختر التلاميذ:</h3>
+                        <button onClick={handleSelectAll} className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
                             {selectedStudentIds.length === students.length ? 'إلغاء الكل' : 'تحديد الكل'}
                         </button>
                     </div>
-                    <div className="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50">
+                    <div className="max-h-48 overflow-y-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg p-2 space-y-2 bg-gray-50 dark:bg-gray-700/50">
                         {students.map(student => (
-                            <div key={student.id} className="flex items-center p-2 rounded-md hover:bg-blue-50">
+                            <div key={student.id} className="flex items-center p-2 rounded-md hover:bg-blue-50 dark:hover:bg-gray-700">
                                 <input type="checkbox" id={`student-${student.id}`} checked={selectedStudentIds.includes(student.id)} onChange={() => handleStudentSelect(student.id)} className="w-5 h-5 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500" />
-                                <label htmlFor={`student-${student.id}`} className="mr-3 text-gray-700 font-medium">{student.name}</label>
+                                <label htmlFor={`student-${student.id}`} className="mr-3 text-gray-700 dark:text-gray-200 font-medium">{student.name}</label>
                             </div>
                         ))}
                     </div>
@@ -181,7 +185,7 @@ const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ students, notes, ab
                     onChange={(e) => setObservation(e.target.value)}
                     placeholder="اكتب ملاحظة..."
                     rows={5}
-                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 />
 
                 <input
@@ -189,20 +193,20 @@ const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ students, notes, ab
                     value={externalLink}
                     onChange={(e) => setExternalLink(e.target.value)}
                     placeholder="🔗 رابط خارجي (اختياري)"
-                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 />
 
                 {preview && (
-                        <div className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                        <div className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
                         {file && file.type.startsWith('image/') ? 
                             <img src={preview} alt="معاينة" className="max-h-40 mx-auto rounded-lg" />
-                            : <p className="text-gray-700 font-semibold">{preview}</p>
+                            : <p className="text-gray-700 dark:text-gray-300 font-semibold">{preview}</p>
                         }
                     </div>
                 )}
 
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 ease-in-out shadow-md">
+                <button onClick={() => fileInputRef.current?.click()} className="w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 ease-in-out shadow-md dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">
                     📎 إضافة ملف (صورة أو PDF)
                 </button>
 
@@ -214,7 +218,7 @@ const TeacherNotesForm: React.FC<TeacherNotesFormProps> = ({ students, notes, ab
                         تسجيل غياب
                     </button>
                 </div>
-                {saveSuccess && <p className="text-green-600 text-center font-semibold animate-pulse">تم إرسال الملاحظة للمراجعة بنجاح!</p>}
+                {saveSuccess && <p className="text-green-600 dark:text-green-400 text-center font-semibold animate-pulse">تم إرسال الملاحظة للمراجعة بنجاح!</p>}
             </div>
 
             <div className="mt-8 flex items-center gap-4">

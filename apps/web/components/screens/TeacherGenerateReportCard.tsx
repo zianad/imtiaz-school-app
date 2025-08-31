@@ -1,15 +1,12 @@
 
 import React from 'react';
-// Fix: Add School import
 import { Student, School } from '../../../../packages/core/types';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface TeacherGenerateReportCardProps {
-    // Fix: Add school, toggleDarkMode, isDarkMode props
     school: School;
     toggleDarkMode: () => void;
     isDarkMode: boolean;

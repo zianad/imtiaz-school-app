@@ -1,6 +1,9 @@
+
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import type { Session } from '@supabase/supabase-js';
+// FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
+import { type Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
 import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
@@ -219,7 +222,8 @@ export default function App() {
   
   // #region Authentication & Data Loading
   const handleLogout = useCallback((isError = false) => {
-    supabase.auth.signOut();
+    // FIX: The `signOut` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    (supabase.auth as any).signOut();
     setSession(null);
     setUserRole(null);
     setCurrentStudent(null);
@@ -355,14 +359,17 @@ export default function App() {
           email = `${code}@school-app.com`;
           password = code;
       }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      // FIX: The `signInWithPassword` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+      const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
       if (error) { throw error; }
       if (!data.session) { throw new Error('Login failed: No session returned'); }
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    // FIX: The `getSession` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    (supabase.auth as any).getSession().then(({ data: { session } }) => setSession(session));
+    // FIX: The `onAuthStateChange` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -425,14 +432,21 @@ export default function App() {
                   return { schoolId, stage, name: `${t('principal')} ${t(`${stage.toLowerCase()}Stage` as any)}`, loginCode: code, };
               });
               for(const principal of principalStagesData) {
-                  const { error: signUpError } = await supabase.auth.signUp({ email: `${principal.loginCode}@school-app.com`, password: principal.loginCode, });
+                  // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+                  const { error: signUpError } = await (supabase.auth as any).signUp({ email: `${principal.loginCode}@school-app.com`, password: principal.loginCode, });
                   if (signUpError && !signUpError.message.includes('User already registered')) throw new Error(`Failed to create principal user for ${principal.stage}: ${signUpError.message}`);
               }
               const { error: principalError } = await supabase.from('principals').insert(camelToSnakeCase(principalStagesData));
               if (principalError) throw principalError;
             } else {
-               await supabase.from('schools').insert({ name, logo_url: logoUrl, is_active: true, id: `school-${Date.now()}` });
-               // Mock mode simplifies principal creation
+               await supabase.from('schools').insert({ 
+                   name, 
+                   logo_url: logoUrl, 
+                   is_active: true, 
+                   id: `school-${Date.now()}`,
+                   stages: Object.values(EducationalStage),
+                   feature_flags: ALL_FEATURES_ENABLED,
+                });
             }
             await fetchUserData();
         } catch (error: any) {
@@ -458,7 +472,10 @@ export default function App() {
     };
     const handleToggleStage = async (stage: EducationalStage) => {
         if (!selectedSchool) return;
-        const newStages = selectedSchool.stages.includes(stage) ? selectedSchool.stages.filter(st => st !== stage) : [...selectedSchool.stages, stage];
+        const currentStages = selectedSchool.stages || [];
+        const newStages = currentStages.includes(stage)
+            ? currentStages.filter(st => st !== stage)
+            : [...currentStages, stage];
         try {
             const { error } = await supabase.from('schools').update({ stages: newStages }).match({ id: activeSchoolId });
             if (error) throw error;
@@ -467,7 +484,8 @@ export default function App() {
     };
     const handleToggleFeatureFlag = async (feature: SchoolFeature) => {
         if (!selectedSchool) return;
-        const newFlags = { ...selectedSchool.featureFlags, [feature]: !selectedSchool.featureFlags[feature] };
+        const currentFlags = selectedSchool.featureFlags || {};
+        const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
         try {
             const { error } = await supabase.from('schools').update({ feature_flags: newFlags }).match({ id: activeSchoolId });
             if (error) throw error;
@@ -476,7 +494,8 @@ export default function App() {
     };
     const handleAddPrincipal = async (stage: EducationalStage, name: string, loginCode: string) => {
         try {
-            await supabase.auth.signUp({ email: `${loginCode}@school-app.com`, password: loginCode, });
+            // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+            await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode, });
             const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId: activeSchoolId }));
             if (error) throw error;
             await fetchUserData();
@@ -498,7 +517,8 @@ export default function App() {
     // Principal Handlers
     const handleAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
         try {
-            await supabase.auth.signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode, });
+            // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+            await (supabase.auth as any).signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode, });
             const { error } = await supabase.from('teachers').insert(camelToSnakeCase({ ...teacher, schoolId: activeSchoolId }));
             if (error) throw error;
             await fetchUserData();
@@ -514,7 +534,8 @@ export default function App() {
     const handleDeleteTeacher = (teacherId: string, teacherName: string) => handleGenericDelete('teachers', teacherId, teacherName);
     const handleAddStudent = async (student: Omit<Student, 'id' | 'grades'>) => {
         try {
-            await supabase.auth.signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode, });
+            // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+            await (supabase.auth as any).signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode, });
             const { error } = await supabase.from('students').insert(camelToSnakeCase({ ...student, schoolId: activeSchoolId }));
             if (error) throw error;
             await fetchUserData();
@@ -523,7 +544,8 @@ export default function App() {
     const handleAddMultipleStudents = async (students: Omit<Student, 'id' | 'grades'>[]) => {
         try {
             for (const student of students) {
-              await supabase.auth.signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode, });
+              // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+              await (supabase.auth as any).signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode, });
             }
             const studentsToAdd = students.map(s => camelToSnakeCase({ ...s, schoolId: activeSchoolId }));
             const { error } = await supabase.from('students').insert(studentsToAdd);

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef } from 'react';
 import { School, Page, SchoolFeature, EducationalStage, Principal } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -147,10 +148,10 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
     };
 
     const FeatureToggle: React.FC<{ feature: SchoolFeature; children?: React.ReactNode }> = ({ feature, children }) => (
-         <div className={`p-3 rounded-lg flex items-center justify-between transition-opacity ${school.featureFlags[feature] !== false ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-200 dark:bg-gray-700 opacity-60'}`}>
+         <div className={`p-3 rounded-lg flex items-center justify-between transition-opacity ${(school.featureFlags || {})[feature] !== false ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-200 dark:bg-gray-700 opacity-60'}`}>
             <div className="flex items-center gap-3">
                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={school.featureFlags[feature] !== false} onChange={() => onToggleFeatureFlag(feature)} className="sr-only peer" />
+                    <input type="checkbox" checked={(school.featureFlags || {})[feature] !== false} onChange={() => onToggleFeatureFlag(feature)} className="sr-only peer" />
                      <div className="w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                 </label>
                 <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm">{t(`${feature}_feature` as any)}</span>
@@ -192,9 +193,9 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-4">المراحل التعليمية المفعلة</h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     {allStages.map(stage => (
-                        <div key={stage} className={`p-3 rounded-lg flex items-center justify-center transition-all ${school.stages.includes(stage) ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                        <div key={stage} className={`p-3 rounded-lg flex items-center justify-center transition-all ${(school.stages || []).includes(stage) ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
                              <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" checked={school.stages.includes(stage)} onChange={() => onToggleStage(stage)} className="w-5 h-5 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                                <input type="checkbox" checked={(school.stages || []).includes(stage)} onChange={() => onToggleStage(stage)} className="w-5 h-5 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
                                 <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm">{t(`${stage.toLowerCase()}Stage` as any)}</span>
                             </label>
                         </div>
@@ -206,7 +207,7 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-4">{t('enterAsPrincipal')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {school.stages.map(stage => (
+                    {(school.stages || []).map(stage => (
                         <button
                             key={stage}
                             onClick={() => onEnterFeaturePage(Page.PrincipalDashboard, stage)}
@@ -224,7 +225,7 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-4">{t('managePrincipals')}</h2>
                 <div className="space-y-4 max-h-[40vh] overflow-y-auto p-2">
                     {allStages.map(stage => (
-                        <div key={stage} className={`p-3 rounded-lg ${school.stages.includes(stage) ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-gray-200 dark:bg-gray-700 opacity-50'}`}>
+                        <div key={stage} className={`p-3 rounded-lg ${(school.stages || []).includes(stage) ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-gray-200 dark:bg-gray-700 opacity-50'}`}>
                             <h3 className="font-semibold text-lg text-center mb-3 text-blue-600 dark:text-blue-400">{t('principalManagementForStage', { stageName: t(`${stage.toLowerCase()}Stage` as any) })}</h3>
                             
                             <div className="space-y-2 mb-4">
@@ -243,9 +244,9 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
                             </div>
 
                             <div className="flex gap-2 items-end border-t dark:border-gray-600 pt-3">
-                                <input type="text" placeholder={t('principalName')} value={newPrincipalInputs[stage]?.name || ''} onChange={e => handleInputChange(stage, 'name', e.target.value)} className="flex-1 p-2 border-2 border-gray-300 rounded text-sm bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" disabled={!school.stages.includes(stage)} />
-                                <input type="text" placeholder={t('loginCode')} value={newPrincipalInputs[stage]?.code || ''} onChange={e => handleInputChange(stage, 'code', e.target.value)} className="flex-1 p-2 border-2 border-gray-300 rounded text-sm bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" disabled={!school.stages.includes(stage)}/>
-                                <button onClick={() => handleAddPrincipalClick(stage)} className="bg-blue-500 text-white font-bold p-2 rounded hover:bg-blue-600 text-sm" disabled={!school.stages.includes(stage)}>{t('add')}</button>
+                                <input type="text" placeholder={t('principalName')} value={newPrincipalInputs[stage]?.name || ''} onChange={e => handleInputChange(stage, 'name', e.target.value)} className="flex-1 p-2 border-2 border-gray-300 rounded text-sm bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" disabled={!(school.stages || []).includes(stage)} />
+                                <input type="text" placeholder={t('loginCode')} value={newPrincipalInputs[stage]?.code || ''} onChange={e => handleInputChange(stage, 'code', e.target.value)} className="flex-1 p-2 border-2 border-gray-300 rounded text-sm bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" disabled={!(school.stages || []).includes(stage)}/>
+                                <button onClick={() => handleAddPrincipalClick(stage)} className="bg-blue-500 text-white font-bold p-2 rounded hover:bg-blue-600 text-sm" disabled={!(school.stages || []).includes(stage)}>{t('add')}</button>
                             </div>
                         </div>
                     ))}

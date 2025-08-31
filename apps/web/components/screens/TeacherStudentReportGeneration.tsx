@@ -1,18 +1,16 @@
 
 
+
 import React, { useState } from 'react';
-// Fix: Add School import
 import { Student, Subject, School } from '../../../../packages/core/types';
 import { SUBJECT_MAP } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface TeacherStudentReportGenerationProps {
-    // Fix: Add school, toggleDarkMode, isDarkMode props
     school: School;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
