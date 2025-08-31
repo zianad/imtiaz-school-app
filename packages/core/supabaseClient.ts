@@ -9,9 +9,40 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
-let mockDataStore = {
-  schools: JSON.parse(JSON.stringify(MOCK_SCHOOLS)) as School[],
+// --- Local Storage Persistence for Mock Data ---
+const LOCAL_STORAGE_KEY = 'supabaseMockData';
+
+const dateReviver = (key: string, value: any) => {
+  const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
+  if (typeof value === 'string' && dateFormat.test(value)) {
+    return new Date(value);
+  }
+  return value;
 };
+
+let mockDataStore: { schools: School[] };
+
+try {
+  const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (savedData) {
+    mockDataStore = JSON.parse(savedData, dateReviver);
+  } else {
+    // Deep copy MOCK_SCHOOLS to prevent mutation of the constant
+    mockDataStore = { schools: JSON.parse(JSON.stringify(MOCK_SCHOOLS)) };
+  }
+} catch (e) {
+  console.error("Failed to load mock data from localStorage", e);
+  mockDataStore = { schools: JSON.parse(JSON.stringify(MOCK_SCHOOLS)) };
+}
+
+const persistMockData = () => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mockDataStore));
+  } catch (e) {
+    console.error("Failed to save mock data to localStorage", e);
+  }
+};
+// --- End of Local Storage Logic ---
 
 // Mock Auth
 let mockSession: any = null;
@@ -116,6 +147,7 @@ const mockSupabaseClient = {
                   ((school as any)[tableName] as any[]).push(newItem);
               }
             });
+            persistMockData();
         } catch (e: any) {
             error = { message: e.message };
         }
@@ -142,7 +174,7 @@ const mockSupabaseClient = {
                 }
             }
         });
-
+        if (found) persistMockData();
         return Promise.resolve({ data: null, error: found ? null : { message: "Item not found" } });
       },
     }),
@@ -170,6 +202,7 @@ const mockSupabaseClient = {
                 }
             });
         }
+        if (found) persistMockData();
         return Promise.resolve({ data: null, error: found ? null : { message: "Item not found" } });
       }
     })
