@@ -138,7 +138,13 @@ export default function App() {
     }
   }, []);
 
-  const activeSchoolId = isSuperAdminImpersonating ? schoolForSuperAdminViewId : selectedSchoolId;
+  // FIX: Correctly determine the active school ID for super admin management.
+  // When a super admin is on the management page, schoolForSuperAdminViewId is set,
+  // but isSuperAdminImpersonating is false. The active ID should be schoolForSuperAdminViewId in this case.
+  const activeSchoolId = (userRole === UserRole.SuperAdmin && schoolForSuperAdminViewId) 
+    ? schoolForSuperAdminViewId 
+    : selectedSchoolId;
+
   const selectedSchool = schools.find(s => s.id === activeSchoolId);
 
   // #region Search (Remains client-side for now)
@@ -471,8 +477,8 @@ export default function App() {
         } catch (error: any) { alert(`Error: ${error.message}`); }
     };
     const handleToggleStage = async (stage: EducationalStage) => {
-        if (!selectedSchool) return;
-        const currentStages = selectedSchool.stages || [];
+        if (!selectedSchool || !selectedSchool.stages) return;
+        const currentStages = selectedSchool.stages;
         const newStages = currentStages.includes(stage)
             ? currentStages.filter(st => st !== stage)
             : [...currentStages, stage];
@@ -483,8 +489,8 @@ export default function App() {
         } catch (error: any) { alert(`Error: ${error.message}`); }
     };
     const handleToggleFeatureFlag = async (feature: SchoolFeature) => {
-        if (!selectedSchool) return;
-        const currentFlags = selectedSchool.featureFlags || {};
+        if (!selectedSchool || !selectedSchool.featureFlags) return;
+        const currentFlags = selectedSchool.featureFlags;
         const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
         try {
             const { error } = await supabase.from('schools').update({ feature_flags: newFlags }).match({ id: activeSchoolId });
