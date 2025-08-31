@@ -41,6 +41,10 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
     // Filter teachers based on the selected educational stage
     const filteredTeachers = useMemo(() => {
         return teachers.filter(teacher => {
+            // Defensively check if assignments exists and is an object to prevent crashes
+            if (!teacher.assignments || typeof teacher.assignments !== 'object') {
+                return false;
+            }
             const teacherLevels = Object.keys(teacher.assignments);
             return teacherLevels.some(level => getStageForLevel(level) === stage);
         });
