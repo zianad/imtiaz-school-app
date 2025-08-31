@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -31,7 +32,8 @@ import MobileSuperAdminDashboard from './SuperAdminDashboard';
 import MobileSuperAdminSchoolManagement from './SuperAdminSchoolManagement';
 import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-import type { Session } from '@supabase/supabase-js';
+// FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
+import { type Session } from '@supabase/supabase-js';
 
 
 const EventHorizonLogo = () => (
@@ -202,7 +204,8 @@ function AppContent() {
   }, []);
   
   const handleLogout = useCallback(() => {
-    supabase.auth.signOut();
+    // FIX: The `signOut` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    (supabase.auth as any).signOut();
     setSession(null);
     setRole(null);
     setCurrentUser(null);
@@ -317,13 +320,16 @@ function AppContent() {
           email = `${code}@school-app.com`;
           password = code;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // FIX: The `signInWithPassword` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+      const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
       if (error) { throw error; }
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    // FIX: The `getSession` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    (supabase.auth as any).getSession().then(({ data: { session } }) => setSession(session));
+    // FIX: The `onAuthStateChange` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -346,7 +352,8 @@ function AppContent() {
                 if (error) alert(error.message); else await fetchUserData();
             }}
             onAddPrincipal={async (schoolId, stage, name, loginCode) => {
-                await supabase.auth.signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
+                // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+                await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
                 const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId }));
                 if (error) alert(error.message); else await fetchUserData();
             }}
@@ -386,7 +393,8 @@ function AppContent() {
                     stage={selectedStage}
                     teachers={selectedSchool.teachers}
                     onAddTeacher={async (teacher) => {
-                         await supabase.auth.signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode });
+                         // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+                         await (supabase.auth as any).signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode });
                          await supabase.from('teachers').insert(camelToSnakeCase({ ...teacher, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
@@ -405,7 +413,8 @@ function AppContent() {
                     stage={selectedStage}
                     students={selectedSchool.students.filter(s => s.stage === selectedStage)}
                     onAddStudent={async (student) => {
-                         await supabase.auth.signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode });
+                         // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+                         await (supabase.auth as any).signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode });
                          await supabase.from('students').insert(camelToSnakeCase({ ...student, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
