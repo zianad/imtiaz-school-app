@@ -1,0 +1,9 @@
+{
+  "name": "Copy of تطبيق امتياز",
+  "description": "تطبيق مدرسي لتسهيل التواصل بين الإدارة، الأساتذة وأولياء الأمور.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "prompt": ""
+}
