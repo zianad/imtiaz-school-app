@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -250,6 +251,11 @@ function AppContent() {
             return {
                 ...school,
                 principals: principalsByStage,
+                // FIX: Defensively ensure every teacher object has an 'assignments' property.
+                teachers: (school.teachers || []).map((t: Teacher) => ({
+                    ...t,
+                    assignments: t.assignments || {}
+                })),
                 students: (school.students || []).map((st: any) => ({
                     ...st,
                     grades: (st.grades || []).reduce((acc: any, g: Grade & { subject: Subject }) => {
@@ -280,6 +286,10 @@ function AppContent() {
                 }
                 const teacher = school.teachers.find((t: Teacher) => t.loginCode === code);
                 if (teacher) {
+                    // FIX: Ensure teacher.assignments is always an object to prevent crashes on login.
+                    if (!teacher.assignments) {
+                        teacher.assignments = {};
+                    }
                     setSelectedSchool(school);
                     setCurrentUser(teacher);
                     setRole(UserRole.Teacher);

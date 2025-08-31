@@ -271,6 +271,12 @@ export default function App() {
               return {
                   ...school,
                   principals: principalsByStage,
+                  // FIX: Defensively ensure every teacher object has an 'assignments' property to prevent crashes
+                  // when filtering or rendering teacher lists (e.g., in PrincipalManageTeachers).
+                  teachers: (school.teachers || []).map((t: Teacher) => ({
+                      ...t,
+                      assignments: t.assignments || {}
+                  })),
                   students: (school.students || []).map((st: any) => ({
                       ...st,
                       grades: (st.grades || []).reduce((acc: any, g: Grade & { subject: Subject }) => {
