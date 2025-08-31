@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse, Type } from '@google/genai';
 // Fix: Add School import
@@ -64,6 +65,7 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
     };
     
     const handleGenerateQuiz = async () => {
+        // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
         if (!imageFile || !process.env.API_KEY) {
             setError('Please upload an image first. API key must be set.');
             return;
@@ -73,6 +75,7 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
         setGeneratedQuiz(null);
 
         try {
+            // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
             const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
             const imagePartData = await fileToGenerativePart(imageFile);
             

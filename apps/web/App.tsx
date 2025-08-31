@@ -80,6 +80,7 @@ import FeedbackModal from './components/FeedbackModal';
 import SearchHeader from './components/common/SearchHeader';
 import SearchResultModal from './components/common/SearchResultModal';
 import ConfirmationModal from './components/common/ConfirmationModal';
+import ConfigErrorScreen from './components/screens/ConfigErrorScreen';
 
 export default function App() {
   const [schools, setSchools] = useState<School[]>([]);
@@ -131,7 +132,8 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    if (process.env.API_KEY && isSupabaseConfigured) { // Only init AI if live
+    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
+    if (process.env.API_KEY) { 
       aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
       console.warn("Gemini API key not set or in mock mode. AI features will be mocked.");
@@ -833,7 +835,6 @@ export default function App() {
   // #endregion
 
   const renderPage = () => {
-      // Offline mode check replaces the fatal error for missing keys
       if (fatalError) return <div className="text-red-500 p-4 bg-red-100 rounded">{fatalError}</div>;
       if (isLoading) return <div className="flex items-center justify-center h-screen"><div>Loading...</div></div>;
       
@@ -1068,6 +1069,14 @@ export default function App() {
 
   const isFullscreenPage = currentPage === Page.PrincipalDashboard && isDesktop;
   const shouldShowSearchHeader = !!(activeSchoolId && currentPage !== Page.UnifiedLogin);
+  const isDeployed = !['localhost', '127.0.0.1', '127.0.0.1:5173'].includes(window.location.hostname);
+
+  if (isDeployed && !isSupabaseConfigured) {
+      return <ConfigErrorScreen />;
+  }
+  
+  if (isLoading) return <div className="flex items-center justify-center h-screen"><div className="text-xl font-semibold dark:text-gray-200">Loading...</div></div>;
+  if (fatalError) return <div className="text-red-500 p-4 bg-red-100 rounded">{fatalError}</div>;
 
   return (
     <div className={`relative min-h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark' : ''}`}>

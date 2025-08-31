@@ -35,6 +35,7 @@ import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../pack
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 // FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
 import { type Session } from '@supabase/supabase-js';
+import MobileConfigErrorScreen from './ConfigErrorScreen';
 
 
 const EventHorizonLogo = () => (
@@ -197,6 +198,7 @@ function AppContent() {
   const aiRef = useRef<GoogleGenAI | null>(null);
 
   useEffect(() => {
+    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
     if (process.env.API_KEY) {
       aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
@@ -348,6 +350,11 @@ function AppContent() {
     else { setIsLoading(false); setSchools([]); }
   }, [session, fetchUserData]);
   
+  const isDeployed = !['localhost', '127.0.0.1'].includes(window.location.hostname);
+  if (isDeployed && !isSupabaseConfigured) {
+      return <MobileConfigErrorScreen />;
+  }
+
   if (isLoading) return <div style={{textAlign: 'center'}}>Loading...</div>;
   if (fatalError) return <div style={{textAlign: 'center', color: 'red'}}>{fatalError}</div>;
   if (!session || !role) return <MobileLoginScreen onLogin={handleLogin} />;

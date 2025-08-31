@@ -4,8 +4,9 @@ import { MOCK_SCHOOLS, SUPER_ADMIN_CODE } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// FIX: Switched from `import.meta.env` to `process.env` to resolve TypeScript errors about 'env' property not existing on 'ImportMeta'.
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
