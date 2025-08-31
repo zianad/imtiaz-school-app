@@ -46,16 +46,30 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
         });
     }, [teachers, stage]);
 
+    const resetForm = () => {
+        setName('');
+        setLoginCode('');
+        setSalary('');
+        setSelectedSubjects([]);
+        setSelectedLevels([]);
+        setAssignments({});
+    };
+
     useEffect(() => {
-        if (editingTeacher) {
+        // If we have a teacher with an ID, it's an edit operation.
+        if (editingTeacher && editingTeacher.id) {
             setName(editingTeacher.name);
             setLoginCode(editingTeacher.loginCode);
             setSelectedSubjects(editingTeacher.subjects);
             setSalary(editingTeacher.salary?.toString() || '');
-            const levels = Object.keys(editingTeacher.assignments);
+            // Defensively check for assignments to prevent crash on empty object
+            const assignmentsData = editingTeacher.assignments || {};
+            const levels = Object.keys(assignmentsData);
             setSelectedLevels(levels);
-            setAssignments(editingTeacher.assignments);
+            setAssignments(assignmentsData);
         } else {
+            // If editingTeacher is null (mobile initial state) or an empty object (desktop 'Add' click),
+            // reset the form to its 'add' state.
             resetForm();
         }
     }, [editingTeacher]);
@@ -66,15 +80,6 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
       setAssignments({});
     }, [stage, stageSubjects]);
     
-    const resetForm = () => {
-        setName('');
-        setLoginCode('');
-        setSalary('');
-        setSelectedSubjects([]);
-        setSelectedLevels([]);
-        setAssignments({});
-    };
-
     const handleSubjectToggle = (subject: Subject) => {
         setSelectedSubjects(prev =>
             prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
@@ -120,7 +125,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
                 assignments,
             };
 
-            if (editingTeacher) {
+            if (editingTeacher && editingTeacher.id) {
                 onUpdateTeacher({ ...editingTeacher, ...teacherData });
             } else {
                 onAddTeacher(teacherData);
@@ -202,7 +207,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
             )}
             <div className="flex items-center gap-2 !mt-6">
                 <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg">
-                    {editingTeacher ? t('updateTeacher') : t('addTeacher')}
+                    {editingTeacher && editingTeacher.id ? t('updateTeacher') : t('addTeacher')}
                 </button>
                 {(editingTeacher || isModal) && (
                     <button type="button" onClick={handleCancelEdit} className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition shadow-sm">
