@@ -1,4 +1,5 @@
-
+// FIX: Add reference to vite client types to resolve import.meta.env error
+/// <reference types="vite/client" />
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -132,9 +133,8 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
-    if (process.env.API_KEY) { 
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (import.meta.env.VITE_API_KEY) { 
+      aiRef.current = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
     } else {
       console.warn("Gemini API key not set or in mock mode. AI features will be mocked.");
     }
@@ -371,15 +371,27 @@ export default function App() {
   }, [session, handleLogout, navigateTo, t]);
   
   const handleLogin = useCallback(async (code: string) => {
-      let email, password;
       if (code === SUPER_ADMIN_CODE) {
-          email = `${SUPER_ADMIN_CODE}@superadmin.com`;
-          password = SUPER_ADMIN_CODE;
-      } else {
-          email = `${code}@school-app.com`;
-          password = code;
+          const mockSuperAdminSession = {
+              user: { 
+                  id: SUPER_ADMIN_CODE, 
+                  email: `${SUPER_ADMIN_CODE}@superadmin.com`,
+                  app_metadata: {},
+                  user_metadata: {},
+                  aud: 'authenticated',
+                  created_at: new Date().toISOString(),
+              },
+              access_token: 'super-admin-mock-token',
+              refresh_token: 'super-admin-mock-refresh',
+              expires_in: 3600,
+              token_type: 'bearer',
+          };
+          setSession(mockSuperAdminSession as any);
+          return;
       }
-      // FIX: The `signInWithPassword` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+
+      const email = `${code}@school-app.com`;
+      const password = code;
       const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
       if (error) { throw error; }
       if (!data.session) { throw new Error('Login failed: No session returned'); }
@@ -756,7 +768,7 @@ export default function App() {
     const handleGenerateAITip = async (): Promise<string> => {
         if (!isSupabaseConfigured || !aiRef.current) {
           await new Promise(res => setTimeout(res, 500));
-          return language === 'fr' ? "Conseil IA: Assurez-vous que votre enfant dorme suffisamment." : "نصيحة الذكاء الاصطناعي: تأكد من أن طفلك يحصل على قسط كافٍ من النوم.";
+          return language === 'fr' ? "Conseil IA: Assurez-vous que votre enfant dorme sufficiently." : "نصيحة الذكاء الاصطناعي: تأكد من أن طفلك يحصل على قسط كافٍ من النوم.";
         }
         const prompt = language === 'fr' 
             ? "Générez un conseil pédagogique court et utile pour les parents."
@@ -1069,10 +1081,10 @@ export default function App() {
 
   const isFullscreenPage = currentPage === Page.PrincipalDashboard && isDesktop;
   const shouldShowSearchHeader = !!(activeSchoolId && currentPage !== Page.UnifiedLogin);
-  const isDeployed = !['localhost', '127.0.0.1', '127.0.0.1:5173'].includes(window.location.hostname);
+  const isProduction = import.meta.env.PROD;
 
-  if (isDeployed && !isSupabaseConfigured) {
-      return <ConfigErrorScreen />;
+  if (isProduction && !isSupabaseConfigured) {
+    return <ConfigErrorScreen />;
   }
   
   if (isLoading) return <div className="flex items-center justify-center h-screen"><div className="text-xl font-semibold dark:text-gray-200">Loading...</div></div>;

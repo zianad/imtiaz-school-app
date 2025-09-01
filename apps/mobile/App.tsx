@@ -325,15 +325,27 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-      let email, password;
       if (code === SUPER_ADMIN_CODE) {
-          email = `${SUPER_ADMIN_CODE}@superadmin.com`;
-          password = SUPER_ADMIN_CODE;
-      } else {
-          email = `${code}@school-app.com`;
-          password = code;
+          const mockSuperAdminSession = {
+              user: { 
+                  id: SUPER_ADMIN_CODE, 
+                  email: `${SUPER_ADMIN_CODE}@superadmin.com`,
+                  app_metadata: {},
+                  user_metadata: {},
+                  aud: 'authenticated',
+                  created_at: new Date().toISOString(),
+              },
+              access_token: 'super-admin-mock-token',
+              refresh_token: 'super-admin-mock-refresh',
+              expires_in: 3600,
+              token_type: 'bearer',
+          };
+          setSession(mockSuperAdminSession as any);
+          return;
       }
-      // FIX: The `signInWithPassword` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
+      
+      const email = `${code}@school-app.com`;
+      const password = code;
       const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
       if (error) { throw error; }
   }, []);
