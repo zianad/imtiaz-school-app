@@ -251,12 +251,28 @@ export default function App() {
     setFatalError(null);
 
     try {
-        const { data, error } = await supabase.from('schools').select(`
-            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*), expenses(*)
+        const { data: schoolsData, error } = await supabase.from('schools').select(`
+            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*), expenses(*)
         `);
 
         if (error) throw error;
         
+        // Manually fetch absences for each school due to schema relationship issue
+        for (const school of schoolsData) {
+            const { data: absencesData, error: absencesError } = await supabase
+                .from('absences')
+                .select('*')
+                .eq('school_id', school.id);
+
+            if (absencesError) {
+                console.warn(`Could not fetch absences for school ${school.id}`, absencesError);
+                school.absences = [];
+            } else {
+                school.absences = absencesData;
+            }
+        }
+
+        const data = schoolsData;
         let transformedSchools = data as any[];
 
         if (isSupabaseConfigured) {
