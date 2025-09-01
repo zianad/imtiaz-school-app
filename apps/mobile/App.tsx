@@ -237,7 +237,7 @@ function AppContent() {
 
     try {
         const { data, error } = await supabase.from('schools').select(`
-            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*), expenses(*), feedback(*)
+            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*), expenses(*)
         `);
 
         if (error) throw error;
