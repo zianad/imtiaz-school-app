@@ -4,7 +4,7 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
-import ReactMarkdown from 'https://esm.sh/react-markdown@9';
+import ReactMarkdown from 'react-markdown';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface GuardianViewPersonalizedExercisesProps {

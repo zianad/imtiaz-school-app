@@ -1,4 +1,5 @@
-
+// FIX: Add reference to vite client types to resolve import.meta.env error
+/// <reference types="vite/client" />
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
@@ -196,11 +197,11 @@ function AppContent() {
 
   const { t, language } = useTranslation();
   const aiRef = useRef<GoogleGenAI | null>(null);
+  const isProduction = import.meta.env.PROD;
 
   useEffect(() => {
-    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to follow Gemini API guidelines and resolve TypeScript errors.
-    if (process.env.API_KEY) {
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (import.meta.env.VITE_API_KEY) {
+      aiRef.current = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
     } else {
       console.warn("Gemini API key not set. AI features will not be available for mobile.");
     }
@@ -350,9 +351,8 @@ function AppContent() {
     else { setIsLoading(false); setSchools([]); }
   }, [session, fetchUserData]);
   
-  const isDeployed = !['localhost', '127.0.0.1'].includes(window.location.hostname);
-  if (isDeployed && !isSupabaseConfigured) {
-      return <MobileConfigErrorScreen />;
+  if (isProduction && !isSupabaseConfigured) {
+    return <MobileConfigErrorScreen />;
   }
 
   if (isLoading) return <div style={{textAlign: 'center'}}>Loading...</div>;
@@ -578,17 +578,6 @@ function AppContent() {
     />;
   }
   
-  // This case should ideally not be reached if the logic is sound,
-  // but it's a safeguard.
-  if (!isSupabaseConfigured) {
-      return (
-        <div style={{ padding: '32px', border: '1px solid #e5e7eb', backgroundColor: 'white', borderRadius: '16px', textAlign: 'center', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', maxWidth: '400px', margin: 'auto' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{t('maintenanceTitle')}</h1>
-            <p style={{ color: '#4b5563', margin: '16px 0' }}>{t('maintenanceMessage')}</p>
-        </div>
-      );
-  }
-
   return null;
 }
 

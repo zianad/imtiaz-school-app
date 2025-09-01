@@ -128,7 +128,7 @@ const MobileTeacherManageMemorization: React.FC<MobileTeacherManageMemorizationP
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <input type="text" placeholder={t('memorizationItemTitle')} value={title} onChange={e => setTitle(e.target.value)} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }} required/>
+                    <input type="text" placeholder={t('memorizationItemTitle')} value={title} onChange={e => setTitle(e.target.value)} required style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }} />
                     {activeTab === 'text' && <textarea placeholder={t('contentText')} value={contentText} onChange={e => setContentText(e.target.value)} rows={5} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }} />}
                     {activeTab === 'image' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

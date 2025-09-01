@@ -4,7 +4,7 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-import ReactMarkdown from 'https://esm.sh/react-markdown@9';
+import ReactMarkdown from 'react-markdown';
 
 interface SuperAdminFeedbackAnalysisProps {
     schools: School[];
@@ -70,65 +70,45 @@ const SuperAdminFeedbackAnalysis: React.FC<SuperAdminFeedbackAnalysisProps> = ({
         </div>
     );
 
-    const roleMap: Record<string, string> = {
-        [UserRole.Guardian]: 'ولي أمر',
-        [UserRole.Teacher]: 'أستاذ',
-        [UserRole.Principal]: 'مدير',
-    };
-
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-teal-600 w-full relative">
+        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-teal-500 w-full relative">
             {isModalOpen && renderModal()}
-            <div className="absolute top-4 start-4 z-10">
+             <div className="absolute top-4 start-4 z-10">
                 <LanguageSwitcher />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">{t('feedbackAnalysis')}</h1>
+            <h1 className="text-3xl font-bold text-gray-800 text-center mb-4">{t('feedbackAnalysis')}</h1>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-center">
-                 <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-semibold text-blue-800">{t('averageRating')}</h3>
-                    <p className="text-3xl font-bold text-blue-600">{averageRating.toFixed(2)} / 5 ★</p>
-                </div>
-                <div className="bg-teal-50 p-4 rounded-lg flex items-center justify-center">
-                    <button
-                        onClick={handleAnalyze}
-                        disabled={allFeedback.length < 3}
-                        className="w-full bg-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                        🧠 {t('analyzeAllFeedback')}
-                    </button>
-                </div>
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner text-center">
+                <p className="text-lg text-gray-600">{t('averageRating')}</p>
+                <p className="text-4xl font-bold text-teal-600">
+                    {averageRating.toFixed(2)} <span className="text-2xl text-yellow-400">★</span>
+                </p>
             </div>
 
+            <div className="mb-6">
+                <button 
+                    onClick={handleAnalyze} 
+                    disabled={allFeedback.length < 2}
+                    className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                    🧠 {t('analyzeAllFeedback')}
+                </button>
+            </div>
 
-            <div className="max-h-[60vh] overflow-y-auto space-y-4 p-2">
+            <div className="max-h-[60vh] overflow-y-auto space-y-3 p-2">
                 <h2 className="text-xl font-semibold text-gray-700 mb-2">{t('allFeedback')}</h2>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th scope="col" className="px-4 py-3">{t('rating')}</th>
-                                <th scope="col" className="px-4 py-3">{t('comments')}</th>
-                                <th scope="col" className="px-4 py-3">{t('userRole')}</th>
-                                <th scope="col" className="px-4 py-3">{t('school')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {allFeedback.map(f => (
-                                <tr key={f.id} className="bg-white border-b">
-                                    <td className="px-4 py-4 font-medium text-gray-900 whitespace-nowrap">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</td>
-                                    <td className="px-4 py-4">{f.comments || "-"}</td>
-                                    <td className="px-4 py-4">{f.userRole ? roleMap[f.userRole] : '-'}</td>
-                                    <td className="px-4 py-4">{f.schoolName}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                 {allFeedback.length === 0 && (
-                     <p className="text-center text-gray-500 py-10">{t('noFeedbackToAnalyze')}</p>
-                 )}
+                {allFeedback.length > 0 ? allFeedback.map(f => (
+                    <div key={f.id} className="bg-gray-50 p-3 rounded-lg border-l-4 border-teal-400">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-gray-800">{f.schoolName} - {t(f.userRole as any)}</span>
+                            <span className="text-yellow-500 font-bold">{f.rating} ★</span>
+                        </div>
+                        <p className="text-gray-600 text-sm">{f.comments}</p>
+                        <p className="text-xs text-gray-400 text-right mt-1">{new Date(f.date).toLocaleDateString()}</p>
+                    </div>
+                )) : (
+                    <p className="text-center text-gray-500 py-10">{t('noFeedbackToAnalyze')}</p>
+                )}
             </div>
 
             <div className="mt-8 flex items-center gap-4">

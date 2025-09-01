@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useMemo } from 'react';
 // Fix: Add School import
 import { Student, EducationalStage, School } from '../../../../packages/core/types';
@@ -9,12 +7,7 @@ import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import ThemeSwitcher from '../common/ThemeSwitcher';
-
-declare global {
-  interface Window {
-    XLSX: any;
-  }
-}
+import * as XLSX from 'xlsx';
 
 interface PrincipalManageStudentsProps {
     school: School;
@@ -147,10 +140,10 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = window.XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const json: any[] = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
                 const newStudents = json.slice(1) 
                     .map(row => ({
@@ -369,4 +362,5 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     );
 };
 
+// FIX: Add default export for the component.
 export default PrincipalManageStudents;

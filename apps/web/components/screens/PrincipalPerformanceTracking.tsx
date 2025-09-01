@@ -6,12 +6,7 @@ import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
-
-declare global {
-  interface Window {
-    Recharts: any;
-  }
-}
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PrincipalPerformanceTrackingProps {
     school: School;
@@ -26,7 +21,6 @@ interface PrincipalPerformanceTrackingProps {
 
 const PrincipalPerformanceTracking: React.FC<PrincipalPerformanceTrackingProps> = ({ school, stage, students, onBack, onLogout, isDesktop = false, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const Recharts = window.Recharts;
     
     const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
 
@@ -54,35 +48,7 @@ const PrincipalPerformanceTracking: React.FC<PrincipalPerformanceTrackingProps> 
             .map(s => ({ ...s, average: calculateStudentAverage(s) }))
             .sort((a, b) => (b.average || 0) - (a.average || 0));
     }, [selectedLevel, students]);
-
-    if (!Recharts) {
-        return (
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 w-full text-center relative">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
-                        {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <LanguageSwitcher />
-                        <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-                    </div>
-                </div>
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t('performanceTracking')}</h1>
-                <p className="text-gray-600 dark:text-gray-300">Loading charts...</p>
-                <div className="mt-8 flex items-center gap-4">
-                    <div className="w-1/2">
-                       <BackButton onClick={onBack} />
-                    </div>
-                     <div className="w-1/2">
-                        <LogoutButton onClick={onLogout} />
-                    </div>
-                </div>
-            </div>
-        );
-    }
     
-    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
-
     if (selectedLevel) {
         return (
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
@@ -169,5 +135,4 @@ const PrincipalPerformanceTracking: React.FC<PrincipalPerformanceTrackingProps> 
         </div>
     );
 };
-
 export default PrincipalPerformanceTracking;

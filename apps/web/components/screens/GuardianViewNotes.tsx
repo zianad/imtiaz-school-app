@@ -5,12 +5,8 @@ import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-declare global {
-  interface Window {
-    Recharts: any;
-  }
-}
 
 interface GuardianViewNotesProps {
     school: School;
@@ -26,8 +22,6 @@ interface GuardianViewNotesProps {
 
 const GuardianViewNotes: React.FC<GuardianViewNotesProps> = ({ school, notes, absences, student, title, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     
-    const Recharts = window.Recharts || {};
-    const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
     const { t, language } = useTranslation();
     const isFrenchUI = language === 'fr';
 
@@ -80,7 +74,7 @@ const GuardianViewNotes: React.FC<GuardianViewNotesProps> = ({ school, notes, ab
                 ملاحظة: تظهر هنا فقط الملاحظات التي تمت مراجعتها والموافقة عليها من طرف الإدارة.
             </div>
 
-            {ResponsiveContainer && hasData && (
+            {hasData && (
                  <div className="mb-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-4">
                      <h2 className="font-semibold text-gray-700 mb-2 text-center text-lg">{isFrenchUI ? "Tendance des Notes" : "مبيان تطور النقط"}</h2>
                      <div className="w-full h-48">
@@ -156,5 +150,4 @@ const GuardianViewNotes: React.FC<GuardianViewNotesProps> = ({ school, notes, ab
         </div>
     );
 };
-
 export default GuardianViewNotes;
