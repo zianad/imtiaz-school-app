@@ -251,25 +251,26 @@ export default function App() {
     setFatalError(null);
 
     try {
+        // FIX: Remove problematic tables (absences, complaints, expenses) from the main query to avoid relationship errors.
         const { data: schoolsData, error } = await supabase.from('schools').select(`
-            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*), expenses(*)
+            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), exam_programs(*), notifications(*), announcements(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*)
         `);
 
         if (error) throw error;
         
-        // Manually fetch absences for each school due to schema relationship issue
+        // FIX: Manually fetch related data for each school to bypass schema relationship issues.
         for (const school of schoolsData) {
-            const { data: absencesData, error: absencesError } = await supabase
-                .from('absences')
-                .select('*')
-                .eq('school_id', school.id);
+            const { data: absencesData, error: absencesError } = await supabase.from('absences').select('*').eq('school_id', school.id);
+            if (absencesError) console.warn(`Could not fetch absences for school ${school.id}`, absencesError);
+            school.absences = absencesError ? [] : absencesData;
 
-            if (absencesError) {
-                console.warn(`Could not fetch absences for school ${school.id}`, absencesError);
-                school.absences = [];
-            } else {
-                school.absences = absencesData;
-            }
+            const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').eq('school_id', school.id);
+            if (complaintsError) console.warn(`Could not fetch complaints for school ${school.id}`, complaintsError);
+            school.complaints = complaintsError ? [] : complaintsData;
+
+            const { data: expensesData, error: expensesError } = await supabase.from('expenses').select('*').eq('school_id', school.id);
+            if (expensesError) console.warn(`Could not fetch expenses for school ${school.id}`, expensesError);
+            school.expenses = expensesError ? [] : expensesData;
         }
 
         const data = schoolsData;
