@@ -236,32 +236,52 @@ function AppContent() {
     setFatalError(null);
 
     try {
-        // FIX: Remove problematic tables (absences, complaints, expenses) from the main query to avoid relationship errors.
-        const { data: schoolsData, error } = await supabase.from('schools').select(`
-            *, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), exam_programs(*), notifications(*), announcements(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), album_photos(*), personalized_exercises(*), unified_assessments(*), talking_cards(*), memorization_items(*)
+        // Step 1: Fetch base school data with directly related tables
+        const { data: schoolsData, error: schoolsError } = await supabase.from('schools').select(`
+            *, principals(*), students(*, grades(*)), teachers(*)
         `);
+        if (schoolsError) throw schoolsError;
 
-        if (error) throw error;
+        const schoolIds = schoolsData.map(s => s.id);
+        if (schoolIds.length === 0) {
+            setSchools([]);
+            setIsLoading(false);
+            return;
+        }
+
+        // Step 2: Fetch all other related data for all schools in parallel
+        const relatedTables = [
+            'summaries', 'exercises', 'notes', 'exam_programs', 'notifications', 
+            'announcements', 'educational_tips', 'monthly_fee_payments', 'interview_requests', 
+            'supplementary_lessons', 'timetables', 'quizzes', 'projects', 'library_items', 
+            'album_photos', 'personalized_exercises', 'unified_assessments', 'talking_cards', 
+            'memorization_items', 'absences', 'complaints', 'expenses'
+        ];
+
+        const promises = relatedTables.map(table => 
+            supabase.from(table).select('*').in('school_id', schoolIds)
+        );
+        const results = await Promise.all(promises);
         
-        // FIX: Manually fetch related data for each school to bypass schema relationship issues.
+        const errors = results.map(r => r.error).filter(Boolean);
+        if (errors.length > 0) console.warn("Errors fetching some related data:", errors);
+
+        const relatedDataMap: { [key: string]: any[] } = {};
+        results.forEach((result, index) => {
+            relatedDataMap[relatedTables[index]] = result.data || [];
+        });
+
+        // Step 3: Map the fetched related data back to their respective schools
         for (const school of schoolsData) {
-            const { data: absencesData, error: absencesError } = await supabase.from('absences').select('*').eq('school_id', school.id);
-            if (absencesError) console.warn(`Could not fetch absences for school ${school.id}`, absencesError);
-            school.absences = absencesError ? [] : absencesData;
-
-            const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').eq('school_id', school.id);
-            if (complaintsError) console.warn(`Could not fetch complaints for school ${school.id}`, complaintsError);
-            school.complaints = complaintsError ? [] : complaintsData;
-
-            const { data: expensesData, error: expensesError } = await supabase.from('expenses').select('*').eq('school_id', school.id);
-            if (expensesError) console.warn(`Could not fetch expenses for school ${school.id}`, expensesError);
-            school.expenses = expensesError ? [] : expensesData;
+            for (const tableName of relatedTables) {
+                (school as any)[tableName] = relatedDataMap[tableName].filter(item => item.school_id === school.id);
+            }
         }
         
         const data = schoolsData;
         const camelCaseSchools: any[] = snakeToCamelCase(data);
         const transformedSchools = camelCaseSchools.map(school => {
-                const principalsByStage: School['principals'] = {};
+            const principalsByStage: School['principals'] = {};
             (school.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
                 if (p.stage) {
                     if (!principalsByStage[p.stage]) principalsByStage[p.stage] = [];
@@ -271,11 +291,7 @@ function AppContent() {
             return {
                 ...school,
                 principals: principalsByStage,
-                // FIX: Defensively ensure every teacher object has an 'assignments' property.
-                teachers: (school.teachers || []).map((t: Teacher) => ({
-                    ...t,
-                    assignments: t.assignments || {}
-                })),
+                teachers: (school.teachers || []).map((t: Teacher) => ({ ...t, assignments: t.assignments || {} })),
                 students: (school.students || []).map((st: any) => ({
                     ...st,
                     grades: (st.grades || []).reduce((acc: any, g: Grade & { subject: Subject }) => {
@@ -306,10 +322,7 @@ function AppContent() {
                 }
                 const teacher = school.teachers.find((t: Teacher) => t.loginCode === code);
                 if (teacher) {
-                    // FIX: Ensure teacher.assignments is always an object to prevent crashes on login.
-                    if (!teacher.assignments) {
-                        teacher.assignments = {};
-                    }
+                    if (!teacher.assignments) teacher.assignments = {};
                     setSelectedSchool(school);
                     setCurrentUser(teacher);
                     setRole(UserRole.Teacher);
