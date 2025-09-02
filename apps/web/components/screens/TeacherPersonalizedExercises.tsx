@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // Fix: Add School import
 import { Student, Subject, School } from '../../../../packages/core/types';
@@ -6,7 +5,7 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-import ReactMarkdown from 'https://esm.sh/react-markdown@9';
+import ReactMarkdown from 'react-markdown';
 // Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
