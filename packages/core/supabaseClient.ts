@@ -1,7 +1,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MOCK_SCHOOLS, SUPER_ADMIN_CODE } from './constants';
+import { MOCK_SCHOOLS, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL_PREFIX, SUPER_ADMIN_PASSWORD } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
@@ -52,7 +52,7 @@ let mockSession: any = null;
 const authListeners: ((event: string, session: any) => void)[] = [];
 
 const findUser = (code: string) => {
-    if (code === SUPER_ADMIN_CODE) return { role: UserRole.SuperAdmin };
+    // Super admin is handled separately in the signInWithPassword mock
     for (const school of mockDataStore.schools) {
         const student = school.students.find(s => s.guardianCode === code);
         if (student) return { role: UserRole.Guardian, school, user: student };
@@ -73,9 +73,25 @@ const mockSupabaseClient = {
     signInWithPassword: ({ email, password }: {email: string, password: string}) => {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                const code = email.split('@')[0];
-                if (findUser(code)) {
-                    mockSession = { user: { id: code, email: email }, expires_in: 3600 };
+                const emailPrefix = email.split('@')[0];
+
+                // Special case for Super Admin
+                if (emailPrefix === SUPER_ADMIN_EMAIL_PREFIX) {
+                    if (password === SUPER_ADMIN_PASSWORD) {
+                        mockSession = { user: { id: SUPER_ADMIN_EMAIL_PREFIX, email: email }, expires_in: 3600 };
+                        authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
+                        resolve({ data: { session: mockSession }, error: null });
+                    } else {
+                        reject({ message: "Invalid login credentials" });
+                    }
+                    return;
+                }
+
+                // Logic for other users
+                const userMatch = findUser(emailPrefix);
+                // For regular users, password is their login/guardian code
+                if (userMatch && password === emailPrefix) {
+                    mockSession = { user: { id: emailPrefix, email: email }, expires_in: 3600 };
                     authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
                     resolve({ data: { session: mockSession }, error: null });
                 } else {
@@ -114,7 +130,9 @@ const mockSupabaseClient = {
             const data = JSON.parse(JSON.stringify(mockDataStore.schools));
             return Promise.resolve({ data: snakeToCamelCase(data), error: null });
         }
-        return Promise.resolve({ data: [], error: { message: `Mock for table ${tableName} not implemented` } });
+        // Fallback for other tables in mock mode
+        const allItems = mockDataStore.schools.flatMap(s => (s as any)[tableName] || []);
+        return Promise.resolve({ data: snakeToCamelCase(JSON.parse(JSON.stringify(allItems))), error: null });
     },
     insert: (data: any | any[]) => {
         const items = Array.isArray(data) ? data : [data];
@@ -132,22 +150,12 @@ const mockSupabaseClient = {
               } else if (tableName === 'principals') {
                   if (!school!.principals[newItem.stage]) school!.principals[newItem.stage] = [];
                   school!.principals[newItem.stage]?.push(newItem);
-              } else if (tableName === 'teachers') {
-                  school!.teachers.push(newItem);
-              } else if (tableName === 'students') {
-                  school!.students.push({...newItem, grades: {}});
-              } else if (tableName === 'announcements') {
-                  school!.announcements.push(newItem);
-              } // ... Add other tables as needed
-              else {
-                  // FIX: Safely access and push to dynamic array properties on the School object.
-                  // The original code caused a TypeScript error because it couldn't guarantee
-                  // that the property being accessed was an array type. Using a type assertion
-                  // to 'any' bypasses this check for our mock implementation.
-                  if (!(school as any)[tableName]) {
-                      (school as any)[tableName] = [];
+              } else {
+                  const tableKey = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase()) as keyof School;
+                  if (!(school as any)[tableKey]) {
+                      (school as any)[tableKey] = [];
                   }
-                  ((school as any)[tableName] as any[]).push(newItem);
+                  ((school as any)[tableKey] as any[]).push(newItem);
               }
             });
             persistMockData();
@@ -165,11 +173,12 @@ const mockSupabaseClient = {
         let found = false;
         
         mockDataStore.schools.forEach(school => {
+            const tableKey = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase()) as keyof School;
             if (tableName === 'schools' && school.id === value) {
                 Object.assign(school, camelData);
                 found = true;
-            } else if (school[tableName as keyof School]) {
-                const table = school[tableName as keyof School] as any[];
+            } else if ((school as any)[tableKey]) {
+                const table = (school as any)[tableKey] as any[];
                 const item = table.find(i => i.id == value);
                 if (item) {
                     Object.assign(item, camelData);
@@ -195,8 +204,9 @@ const mockSupabaseClient = {
             }
         } else {
              mockDataStore.schools.forEach(school => {
-                if (school[tableName as keyof School]) {
-                    const table = school[tableName as keyof School] as any[];
+                const tableKey = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase()) as keyof School;
+                if ((school as any)[tableKey]) {
+                    const table = (school as any)[tableKey] as any[];
                     const index = table.findIndex(i => i.id == value);
                     if (index > -1) {
                         table.splice(index, 1);

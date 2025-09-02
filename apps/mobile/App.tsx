@@ -1,10 +1,8 @@
 
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
-import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE } from '../../packages/core/constants';
+import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL_PREFIX } from '../../packages/core/constants';
 import { Student, Subject, Summary, Exercise, Note, Absence, Grade, EducationalStage, MemorizationItem, School, Teacher, UserRole, Principal } from '../../packages/core/types';
 import MobileGuardianDashboard from './GuardianDashboard';
 import MobileGuardianSubjectMenu, { MobileGuardianPage } from './GuardianSubjectMenu';
@@ -312,11 +310,10 @@ function AppContent() {
         const email = session?.user?.email;
         if (!email) { handleLogout(); return; }
 
-        const code = email.startsWith(SUPER_ADMIN_CODE) ? SUPER_ADMIN_CODE : email.split('@')[0];
-        
-        if (code === SUPER_ADMIN_CODE) {
+        if (email.startsWith(SUPER_ADMIN_EMAIL_PREFIX)) {
             setRole(UserRole.SuperAdmin);
         } else {
+            const code = email.split('@')[0];
             for (const school of transformedSchools) {
                 const student = school.students.find((s: Student) => s.guardianCode === code);
                 if (student) {
@@ -360,11 +357,13 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-    const email = code === SUPER_ADMIN_CODE
-        ? `${SUPER_ADMIN_CODE}@superadmin.com`
+    const isSuperAdmin = code === SUPER_ADMIN_CODE;
+    
+    const email = isSuperAdmin
+        ? `${SUPER_ADMIN_EMAIL_PREFIX}@superadmin.com`
         : `${code}@school-app.com`;
     
-    const password = code;
+    const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
 
