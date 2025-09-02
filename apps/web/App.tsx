@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
-import { type Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
 import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
@@ -131,7 +131,7 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    // FIX: Use process.env.API_KEY as per the guidelines.
+    // FIX: Per Gemini guidelines, API key must be from process.env.API_KEY
     if (process.env.API_KEY) { 
       aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
@@ -1117,8 +1117,9 @@ export default function App() {
 
   const isFullscreenPage = currentPage === Page.PrincipalDashboard && isDesktop;
   const shouldShowSearchHeader = !!(activeSchoolId && currentPage !== Page.UnifiedLogin);
-  // FIX: Replace import.meta.env.PROD with process.env.NODE_ENV check to remove dependency on vite/client types.
-  const isProduction = process.env.NODE_ENV === 'production';
+  // FIX: Cast import.meta to any to bypass TypeScript error in environments without vite/client types.
+  // Vite exposes production status via import.meta.env.PROD
+  const isProduction = (import.meta as any).env.PROD;
 
   if (isProduction && !isSupabaseConfigured) {
     return <ConfigErrorScreen />;

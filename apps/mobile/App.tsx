@@ -33,7 +33,7 @@ import MobileSuperAdminSchoolManagement from './SuperAdminSchoolManagement';
 import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 // FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
-import { type Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import MobileConfigErrorScreen from './ConfigErrorScreen';
 
 
@@ -195,11 +195,12 @@ function AppContent() {
 
   const { t, language } = useTranslation();
   const aiRef = useRef<GoogleGenAI | null>(null);
-  // FIX: Replace import.meta.env.PROD with process.env.NODE_ENV check to remove dependency on vite/client types.
-  const isProduction = process.env.NODE_ENV === 'production';
+  // FIX: Cast import.meta to any to bypass TypeScript error in environments without vite/client types.
+  // Vite exposes production status via import.meta.env.PROD
+  const isProduction = (import.meta as any).env.PROD;
 
   useEffect(() => {
-    // FIX: Use process.env.API_KEY as per the guidelines.
+    // FIX: Per Gemini guidelines, API key must be from process.env.API_KEY
     if (process.env.API_KEY) {
       aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {

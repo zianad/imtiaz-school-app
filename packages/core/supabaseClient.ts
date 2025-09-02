@@ -5,9 +5,10 @@ import { MOCK_SCHOOLS, SUPER_ADMIN_CODE } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
-// FIX: Replace import.meta.env with process.env to remove dependency on vite/client types.
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+// FIX: Cast import.meta to any to bypass TypeScript error in environments without vite/client types.
+// In a Vite app, environment variables are exposed on import.meta.env
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
