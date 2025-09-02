@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -356,14 +357,32 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-      const email = code === SUPER_ADMIN_CODE 
-          ? `${SUPER_ADMIN_CODE}@superadmin.com` 
-          : `${code}@school-app.com`;
-      
-      const password = code;
-      
-      const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
-      if (error) { throw error; }
+    const email = code === SUPER_ADMIN_CODE
+        ? `${SUPER_ADMIN_CODE}@superadmin.com`
+        : `${code}@school-app.com`;
+    
+    const password = code;
+    
+    const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
+
+    if (error && error.message === 'Invalid login credentials' && code === SUPER_ADMIN_CODE) {
+        console.warn('Super Admin login failed. Attempting to create Super Admin user for mobile. This should only happen once.');
+        const { error: signUpError } = await (supabase.auth as any).signUp({
+            email,
+            password,
+        });
+
+        if (signUpError && !signUpError.message.includes('User already registered')) {
+            throw signUpError;
+        }
+        
+        const { error: signInError } = await (supabase.auth as any).signInWithPassword({ email, password });
+        if (signInError) {
+            throw error;
+        }
+    } else if (error) {
+        throw error;
+    }
   }, []);
 
   useEffect(() => {

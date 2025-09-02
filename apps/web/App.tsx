@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
@@ -407,15 +408,37 @@ export default function App() {
   }, [session, handleLogout, navigateTo, t]);
   
   const handleLogin = useCallback(async (code: string) => {
-      const email = code === SUPER_ADMIN_CODE 
-          ? `${SUPER_ADMIN_CODE}@superadmin.com` 
-          : `${code}@school-app.com`;
-      
-      const password = code;
-      
-      const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
-      if (error) { throw error; }
-      if (!data.session) { throw new Error('Login failed: No session returned'); }
+    const email = code === SUPER_ADMIN_CODE
+        ? `${SUPER_ADMIN_CODE}@superadmin.com`
+        : `${code}@school-app.com`;
+
+    const password = code;
+
+    let { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
+
+    if (error && error.message === 'Invalid login credentials' && code === SUPER_ADMIN_CODE) {
+        console.warn('Super Admin login failed. Attempting to create Super Admin user. This should only happen once.');
+        const { error: signUpError } = await (supabase.auth as any).signUp({
+            email,
+            password,
+        });
+
+        if (signUpError && !signUpError.message.includes('User already registered')) {
+            throw signUpError;
+        }
+
+        const { data: signInData, error: signInError } = await (supabase.auth as any).signInWithPassword({ email, password });
+        
+        if (signInError) {
+            throw error;
+        }
+
+        data = signInData;
+        error = null;
+    }
+
+    if (error) { throw error; }
+    if (!data.session) { throw new Error('Login failed: No session returned'); }
   }, []);
 
   useEffect(() => {
