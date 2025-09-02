@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse, Type } from '@google/genai';
 import { Quiz, Question, School } from '../../../../packages/core/types';
@@ -59,8 +58,7 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
     };
     
     const handleGenerateQuiz = async () => {
-        // FIX: Per Gemini API guidelines, the API key must be obtained from process.env.API_KEY.
-        const apiKey = process.env.API_KEY;
+        const apiKey = (import.meta as any).env.VITE_API_KEY;
         if (!imageFile || !apiKey) {
             setError('Please upload an image first. API key must be set.');
             return;

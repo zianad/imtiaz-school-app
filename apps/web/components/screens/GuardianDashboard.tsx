@@ -22,14 +22,7 @@ const GuardianDashboard: React.FC<GuardianDashboardProps> = ({ student, school, 
     const { t } = useTranslation();
     const unreadCount = notifications.filter(n => n.studentId === student.id && !n.read).length;
 
-    const allAvailableSubjects = STAGE_DETAILS[student.stage]?.subjects || [];
-    
-    // As per the user request, filter the subjects list.
-    const availableSubjects = allAvailableSubjects.filter(subject => 
-        subject === Subject.Arabic || 
-        subject === Subject.French || 
-        subject === Subject.Math
-    );
+    const availableSubjects = STAGE_DETAILS[student.stage]?.subjects || [];
 
     const isPreSchool = student.stage === EducationalStage.PRE_SCHOOL;
 

@@ -1,7 +1,5 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-// FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
 import type { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
 import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL_PREFIX } from '../../packages/core/constants';
@@ -155,17 +153,14 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    // FIX: Per Gemini API guidelines, the API key must be obtained from process.env.API_KEY.
-    if (process.env.API_KEY) { 
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = (import.meta as any).env.VITE_API_KEY;
+    if (apiKey) { 
+      aiRef.current = new GoogleGenAI({ apiKey: apiKey });
     } else {
-      console.warn("Gemini API key not found in process.env.API_KEY. AI features will be mocked.");
+      console.warn("Gemini API key not found in import.meta.env.VITE_API_KEY. AI features will be mocked.");
     }
   }, []);
 
-  // FIX: Correctly determine the active school ID for super admin management.
-  // When a super admin is on the management page, schoolForSuperAdminViewId is set,
-  // but isSuperAdminImpersonating is false. The active ID should be schoolForSuperAdminViewId in this case.
   const activeSchoolId = (userRole === UserRole.SuperAdmin && schoolForSuperAdminViewId) 
     ? schoolForSuperAdminViewId 
     : selectedSchoolId;
@@ -253,7 +248,6 @@ export default function App() {
   
   // #region Authentication & Data Loading
   const handleLogout = useCallback((isError = false) => {
-    // FIX: The `signOut` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
     (supabase.auth as any).signOut();
     setSession(null);
     setUserRole(null);
@@ -300,7 +294,7 @@ export default function App() {
             'announcements', 'educational_tips', 'monthly_fee_payments', 'interview_requests', 
             'supplementary_lessons', 'timetables', 'quizzes', 'projects', 'library_items', 
             'album_photos', 'personalized_exercises', 'unified_assessments', 'talking_cards', 
-            'memorization_items', 'absences', 'complaints', 'expenses'
+            'memorization_items', 'absences', 'complaints', 'expenses', 'feedback'
         ];
 
         const promises = relatedTables.map(table => 
@@ -420,7 +414,6 @@ export default function App() {
     
     const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     
-    // FIX: The `signInWithPassword` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {
         throw error;
@@ -428,12 +421,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // FIX: The `getSession` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
     (supabase.auth as any).getSession().then(({ data: { session } }: { data: { session: Session | null }}) => {
       setSession(session)
     });
 
-    // FIX: The `onAuthStateChange` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
     const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event: string, session: Session | null) => {
       setSession(session);
       if (_event === "SIGNED_OUT") {
@@ -533,30 +524,34 @@ export default function App() {
   
   const renderPage = () => {
     switch (currentPage) {
-        // Add all cases here based on imported screens
-        // This will be a large switch statement
-        // For brevity, only a few cases are shown here
-        
         case Page.UnifiedLogin:
              return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
         
+        // Super Admin Pages
         case Page.SuperAdminDashboard:
             return <SuperAdminDashboard 
                 schools={schools}
                 onAddSchool={async (name, principalCode, logoUrl) => {
-                    const { error } = await supabase.from('schools').insert(camelToSnakeCase({
+                    const { data: signUpData, error: signUpError } = await (supabase.auth as any).signUp({ email: `${principalCode}@school-app.com`, password: principalCode });
+                    if (signUpError && signUpError.message !== 'User already registered') { alert(signUpError.message); return; }
+
+                    const { data: schoolData, error: schoolError } = await supabase.from('schools').insert(camelToSnakeCase({
                         name,
                         logoUrl,
                         principals: {},
                         isActive: true,
                         stages: [EducationalStage.PRE_SCHOOL, EducationalStage.PRIMARY, EducationalStage.MIDDLE, EducationalStage.HIGH],
                         featureFlags: ALL_FEATURES_ENABLED,
-                    }));
-                    if(error) alert(error.message); else await fetchUserData();
+                    })).select();
+                    if(schoolError) { alert(schoolError.message); return; }
+
+                    const schoolId = schoolData[0].id;
+                    const { error: principalError } = await supabase.from('principals').insert(camelToSnakeCase({ name: `مدير ${name}`, loginCode: principalCode, stage: EducationalStage.PRIMARY, schoolId }));
+                    if(principalError) { alert(principalError.message); } else { await fetchUserData(); }
                 }}
                 onDeleteSchool={(schoolId, schoolName) => handleOpenConfirmModal(
-                    `Delete ${schoolName}`,
                     t('confirmDeleteSchool', { schoolName }),
+                    ``,
                     async () => {
                         await supabase.from('schools').delete().match({ id: schoolId });
                         await fetchUserData();
@@ -569,7 +564,72 @@ export default function App() {
                 onNavigate={navigateTo}
                 onLogout={handleLogout}
             />;
+        case Page.SuperAdminSchoolManagement:
+             return <SuperAdminSchoolManagement 
+                school={selectedSchool!}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                onUpdateSchoolDetails={async (schoolId, name, logoUrl) => {
+                    const { error } = await supabase.from('schools').update(camelToSnakeCase({ name, logoUrl })).match({ id: schoolId });
+                    if (error) alert(error.message); else await fetchUserData();
+                }}
+                onToggleStatus={async () => {
+                    const { error } = await supabase.from('schools').update({ is_active: !selectedSchool!.isActive }).match({ id: selectedSchool!.id });
+                    if (error) alert(error.message); else await fetchUserData();
+                }}
+                onToggleStage={async (stage) => {
+                    const currentStages = selectedSchool!.stages || [];
+                    const newStages = currentStages.includes(stage)
+                        ? currentStages.filter(s => s !== stage)
+                        : [...currentStages, stage];
+                    const { error } = await supabase.from('schools').update({ stages: newStages }).match({ id: selectedSchool!.id });
+                    if (error) alert(error.message); else await fetchUserData();
+                }}
+                onToggleFeatureFlag={async (feature) => {
+                    const currentFlags = selectedSchool!.featureFlags || {};
+                    const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
+                    const { error } = await supabase.from('schools').update({ feature_flags: newFlags }).match({ id: selectedSchool!.id });
+                    if (error) alert(error.message); else await fetchUserData();
+                }}
+                onAddPrincipal={async (stage, name, loginCode) => {
+                    const { data: signUpData, error: signUpError } = await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
+                    if (signUpError && signUpError.message !== 'User already registered') { alert(signUpError.message); return; }
+
+                    const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId: selectedSchool!.id }));
+                    if (error) alert(error.message); else await fetchUserData();
+                }}
+                onDeletePrincipal={async (stage, principalId, principalName) => handleOpenConfirmModal(
+                    t('confirmDeletePrincipal', { name: principalName }),
+                    ``,
+                    async () => {
+                        const { error } = await supabase.from('principals').delete().match({ id: principalId });
+                        if (error) alert(error.message); else await fetchUserData();
+                    }
+                )}
+                onUpdatePrincipalCode={async (stage, principalId, newCode) => { /* Logic to update user password in Supabase Auth */ }}
+                onEnterFeaturePage={(page, stage) => {
+                    setIsSuperAdminImpersonating(true);
+                    setSelectedStage(stage);
+                    navigateTo(page);
+                }}
+            />;
+         case Page.SuperAdminFeedbackAnalysis:
+            return <SuperAdminFeedbackAnalysis
+                schools={schools}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                onAnalyze={async () => {
+                    if (!aiRef.current) throw new Error("AI Client not initialized.");
+                    const feedbackText = schools.flatMap(s => s.feedback).map(f => `Rating: ${f.rating}, Comment: ${f.comments}, Role: ${f.userRole}`).join('\n---\n');
+                    const prompt = `Analyze the following user feedback for a school app. Identify common themes, summarize positive and negative points, and provide actionable suggestions for improvement. The feedback is:\n${feedbackText}`;
+                    const response = await aiRef.current.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
+                    return response.text;
+                }}
+            />;
             
+        // Guardian Pages
         case Page.GuardianDashboard:
             return <GuardianDashboard 
                 student={currentStudent!} 
@@ -584,21 +644,16 @@ export default function App() {
                 toggleDarkMode={toggleDarkMode}
                 isDarkMode={isDarkMode}
             />;
-            
-        case Page.TeacherDashboard:
-            return <TeacherDashboard 
-                school={selectedSchool!} 
-                teacher={currentTeacher!}
-                onSelectionComplete={(level, subject) => {
-                    setSelectedLevel(level);
-                    setSelectedSubject(subject);
-                    navigateTo(Page.TeacherClassSelection);
-                }}
+        case Page.GuardianSubjectMenu:
+            return <GuardianSubjectMenu 
+                subject={selectedSubject!}
+                school={selectedSchool!}
+                studentLevel={currentStudent!.level}
+                onSelectAction={navigateTo}
                 onBack={handleBack}
                 onLogout={handleLogout}
                 toggleDarkMode={toggleDarkMode}
                 isDarkMode={isDarkMode}
-                isImpersonating={isPrincipalImpersonatingTeacher}
             />;
         
         // ... all other pages
@@ -608,7 +663,12 @@ export default function App() {
                  return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
             }
             // Fallback for any unhandled page or state
-            return <div>Page not found or user not authenticated.</div>;
+            return <div className="text-center">
+                <h1 className="text-xl font-bold dark:text-white">Page Not Found or User Role Unidentified</h1>
+                <p className="dark:text-gray-300">Current Role: {userRole}</p>
+                <p className="dark:text-gray-300">Current Page: {currentPage}</p>
+                <button onClick={() => handleLogout()} className="mt-4 bg-red-500 text-white p-2 rounded">Logout</button>
+            </div>;
     }
   };
 
