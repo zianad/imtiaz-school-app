@@ -62,8 +62,8 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
     };
     
     const handleGenerateQuiz = async () => {
-        // FIX: Use process.env.API_KEY as per the guidelines.
-        if (!imageFile || !process.env.API_KEY) {
+        const apiKey = (import.meta as any).env.VITE_API_KEY;
+        if (!imageFile || !apiKey) {
             setError('Please upload an image first. API key must be set.');
             return;
         }
@@ -72,8 +72,7 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
         setGeneratedQuiz(null);
 
         try {
-            // FIX: Use process.env.API_KEY as per the guidelines.
-            const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+            const ai = new GoogleGenAI({apiKey: apiKey});
             const imagePartData = await fileToGenerativePart(imageFile);
             
             const schema = {
