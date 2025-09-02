@@ -1,9 +1,8 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
-// IMPORTANT: These credentials must match the super admin user created in the Supabase Auth dashboard.
-// The email for the super admin user should be "superadmin@superadmin.com".
+// IMPORTANT: The super admin credentials here must match the super admin user in the Supabase Auth dashboard.
 export const SUPER_ADMIN_CODE = "Lunallena11241984"; // This is what the user types in the login form.
-export const SUPER_ADMIN_EMAIL_PREFIX = "superadmin"; // This is the prefix for the actual user in Supabase Auth.
+export const SUPER_ADMIN_EMAIL_PREFIX = "Lunallena11241984"; // This is used to construct the email, e.g., prefix@superadmin.com
 export const SUPER_ADMIN_PASSWORD = "Lunallena11241984";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
