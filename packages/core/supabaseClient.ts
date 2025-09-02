@@ -1,5 +1,3 @@
-// FIX: Add reference to vite client types to resolve import.meta.env error
-/// <reference types="vite/client" />
 
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -7,8 +5,9 @@ import { MOCK_SCHOOLS, SUPER_ADMIN_CODE } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// FIX: Replace import.meta.env with process.env to remove dependency on vite/client types.
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 

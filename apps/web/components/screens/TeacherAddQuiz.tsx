@@ -1,5 +1,3 @@
-// FIX: Add reference to vite client types to resolve import.meta.env error
-/// <reference types="vite/client" />
 
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse, Type } from '@google/genai';
@@ -64,7 +62,8 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
     };
     
     const handleGenerateQuiz = async () => {
-        if (!imageFile || !import.meta.env.VITE_API_KEY) {
+        // FIX: Use process.env.API_KEY as per the guidelines.
+        if (!imageFile || !process.env.API_KEY) {
             setError('Please upload an image first. API key must be set.');
             return;
         }
@@ -73,7 +72,8 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
         setGeneratedQuiz(null);
 
         try {
-            const ai = new GoogleGenAI({apiKey: import.meta.env.VITE_API_KEY});
+            // FIX: Use process.env.API_KEY as per the guidelines.
+            const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
             const imagePartData = await fileToGenerativePart(imageFile);
             
             const schema = {

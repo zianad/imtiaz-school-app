@@ -1,5 +1,3 @@
-// FIX: Add reference to vite client types to resolve import.meta.env error
-/// <reference types="vite/client" />
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
@@ -197,11 +195,13 @@ function AppContent() {
 
   const { t, language } = useTranslation();
   const aiRef = useRef<GoogleGenAI | null>(null);
-  const isProduction = import.meta.env.PROD;
+  // FIX: Replace import.meta.env.PROD with process.env.NODE_ENV check to remove dependency on vite/client types.
+  const isProduction = process.env.NODE_ENV === 'production';
 
   useEffect(() => {
-    if (import.meta.env.VITE_API_KEY) {
-      aiRef.current = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+    // FIX: Use process.env.API_KEY as per the guidelines.
+    if (process.env.API_KEY) {
+      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
       console.warn("Gemini API key not set. AI features will not be available for mobile.");
     }

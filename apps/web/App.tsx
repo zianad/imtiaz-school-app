@@ -1,5 +1,3 @@
-// FIX: Add reference to vite client types to resolve import.meta.env error
-/// <reference types="vite/client" />
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -133,8 +131,9 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    if (import.meta.env.VITE_API_KEY) { 
-      aiRef.current = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+    // FIX: Use process.env.API_KEY as per the guidelines.
+    if (process.env.API_KEY) { 
+      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
       console.warn("Gemini API key not set or in mock mode. AI features will be mocked.");
     }
@@ -1118,7 +1117,8 @@ export default function App() {
 
   const isFullscreenPage = currentPage === Page.PrincipalDashboard && isDesktop;
   const shouldShowSearchHeader = !!(activeSchoolId && currentPage !== Page.UnifiedLogin);
-  const isProduction = import.meta.env.PROD;
+  // FIX: Replace import.meta.env.PROD with process.env.NODE_ENV check to remove dependency on vite/client types.
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction && !isSupabaseConfigured) {
     return <ConfigErrorScreen />;
