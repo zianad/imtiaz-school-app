@@ -132,9 +132,11 @@ export default function App() {
   }, [history]);
 
   useEffect(() => {
-    // FIX: Per Gemini guidelines, API key must be from process.env.API_KEY
-    if (process.env.API_KEY) { 
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // FIX: Per Gemini guidelines, API key must be from VITE_API_KEY env var.
+    // Use import.meta.env for Vite environment variables
+    const apiKey = (import.meta as any).env.VITE_API_KEY;
+    if (apiKey) { 
+      aiRef.current = new GoogleGenAI({ apiKey });
     } else {
       console.warn("Gemini API key not set or in mock mode. AI features will be mocked.");
     }
@@ -414,29 +416,8 @@ export default function App() {
 
     const password = code;
 
-    let { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
-
-    if (error && error.message === 'Invalid login credentials' && code === SUPER_ADMIN_CODE) {
-        console.warn('Super Admin login failed. Attempting to create Super Admin user. This should only happen once.');
-        const { error: signUpError } = await (supabase.auth as any).signUp({
-            email,
-            password,
-        });
-
-        if (signUpError && !signUpError.message.includes('User already registered')) {
-            throw signUpError;
-        }
-
-        const { data: signInData, error: signInError } = await (supabase.auth as any).signInWithPassword({ email, password });
-        
-        if (signInError) {
-            throw error;
-        }
-
-        data = signInData;
-        error = null;
-    }
-
+    const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
+    
     if (error) { throw error; }
     if (!data.session) { throw new Error('Login failed: No session returned'); }
   }, []);
@@ -956,7 +937,7 @@ export default function App() {
                 return <PrincipalReviewAlbum school={selectedSchool} pendingPhotos={selectedSchool.albumPhotos.filter(p => p.status === 'pending')} onApprove={(id) => handleUpdateAlbumPhotoStatus(id, 'approved')} onReject={(id) => handleUpdateAlbumPhotoStatus(id, 'rejected')} onBack={handleBack} onLogout={handleLogout} isDesktop={isDesktop} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>;
           case Page.PrincipalFinancialDashboard:
                 if (!selectedSchool || !selectedStage) return null;
-                return <PrincipalFinancialDashboard school={selectedSchool} stage={selectedStage} onAddExpense={handleAddExpense} onBack={handleBack} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} isDesktop={isDesktop}/>;
+                return <PrincipalFinancialDashboard school={selectedSchool} stage={selectedStage} onAddExpense={handleAddExpense} onBack={handleBack} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDesktop} isDesktop={isDesktop}/>;
 
           // ... All other cases for Teacher and Guardian also remain the same, just passing new handlers
           // Teacher

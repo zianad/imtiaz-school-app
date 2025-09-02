@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -201,9 +202,11 @@ function AppContent() {
   const isProduction = (import.meta as any).env.PROD;
 
   useEffect(() => {
-    // FIX: Per Gemini guidelines, API key must be from process.env.API_KEY
-    if (process.env.API_KEY) {
-      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // FIX: Per Gemini guidelines, API key must be from VITE_API_KEY env var.
+    // Use import.meta.env for Vite environment variables
+    const apiKey = (import.meta as any).env.VITE_API_KEY;
+    if (apiKey) {
+      aiRef.current = new GoogleGenAI({ apiKey });
     } else {
       console.warn("Gemini API key not set. AI features will not be available for mobile.");
     }
@@ -363,25 +366,13 @@ function AppContent() {
     
     const password = code;
     
-    const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
+    const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
 
-    if (error && error.message === 'Invalid login credentials' && code === SUPER_ADMIN_CODE) {
-        console.warn('Super Admin login failed. Attempting to create Super Admin user for mobile. This should only happen once.');
-        const { error: signUpError } = await (supabase.auth as any).signUp({
-            email,
-            password,
-        });
-
-        if (signUpError && !signUpError.message.includes('User already registered')) {
-            throw signUpError;
-        }
-        
-        const { error: signInError } = await (supabase.auth as any).signInWithPassword({ email, password });
-        if (signInError) {
-            throw error;
-        }
-    } else if (error) {
+    if (error) {
         throw error;
+    }
+    if (!data.session) {
+      throw new Error('Login failed: No session returned');
     }
   }, []);
 
