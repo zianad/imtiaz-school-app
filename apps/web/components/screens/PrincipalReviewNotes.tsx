@@ -1,12 +1,9 @@
-
 import React from 'react';
-// Fix: Add School import
 import { Note, Student, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface PrincipalReviewNotesProps {

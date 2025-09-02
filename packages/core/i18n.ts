@@ -1,5 +1,4 @@
 
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from './types';
 
@@ -906,6 +905,9 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
     return translation;
   }, [language]);
 
-  // FIX: Use React.createElement instead of JSX in .ts file to avoid parsing errors
-  return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t } }, children);
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        {children}
+    </LanguageContext.Provider>
+  );
 };

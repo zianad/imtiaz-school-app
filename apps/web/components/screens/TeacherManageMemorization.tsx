@@ -1,16 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-// Fix: Add School import
 import { MemorizationItem, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface TeacherManageMemorizationProps {
-    // Fix: Add school, toggleDarkMode, isDarkMode props
     school: School;
     toggleDarkMode: () => void;
     isDarkMode: boolean;

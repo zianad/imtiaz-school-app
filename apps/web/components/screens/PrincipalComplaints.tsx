@@ -4,7 +4,7 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
-import ReactMarkdown from 'https://esm.sh/react-markdown@9';
+import ReactMarkdown from 'react-markdown';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface PrincipalComplaintsProps {
@@ -56,11 +56,11 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
                     </div>
                 ) : (
                     <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed max-h-[60vh] overflow-y-auto prose prose-sm max-w-none dark:prose-invert">
-                        {analysis === t('noComplaintsToAnalyze') ? <p>{analysis}</p> : <ReactMarkdown>{analysis}</ReactMarkdown>}
+                        <ReactMarkdown>{analysis}</ReactMarkdown>
                     </div>
                 )}
                  <div className="mt-6">
-                    <button onClick={() => setIsModalOpen(false)} className="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 transition">
+                    <button onClick={() => setIsModalOpen(false)} className="w-full bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition">
                         {t('back')}
                     </button>
                 </div>
@@ -69,10 +69,10 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
     );
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-orange-600 dark:border-orange-500 w-full relative">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
             {isModalOpen && renderModal()}
-             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
+            <div className="flex justify-between items-center mb-6">
+                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
                 </div>
                 <div className="flex items-center gap-2">
@@ -81,26 +81,27 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
                 </div>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 text-center">{t('complaintsAndSuggestions')}</h1>
-
-            <div className="mb-4">
-                <button
-                    onClick={handleAnalyze}
-                    disabled={complaints.length < 3}
-                    className="w-full bg-pink-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            
+            <div className="mb-6">
+                <button 
+                    onClick={handleAnalyze} 
+                    disabled={complaints.length < 2}
+                    className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                    🧠 {t('analyzeComplaints')} (BETA)
+                    🧠 {t('analyzeComplaints')}
                 </button>
             </div>
 
-
             <div className="max-h-[60vh] overflow-y-auto space-y-4 p-2">
-                {complaints.length > 0 ? complaints.sort((a, b) => b.date.getTime() - a.date.getTime()).map(c => (
+                <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('receivedComplaints')}</h2>
+                {complaints.length > 0 ? complaints.map(c => (
                     <div key={c.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg shadow-sm border-l-4 border-orange-500 dark:border-orange-400">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">{t('fromGuardianOf')}: <strong>{getStudentName(c.studentId)}</strong></p>
                         <p className="whitespace-pre-wrap mb-2 text-gray-800 dark:text-gray-200">{c.content}</p>
-                        {c.image && <img src={c.image} alt="attachment" className="mt-2 rounded-lg max-w-xs h-auto"/>}
+                        {c.image && <img src={c.image} alt="attachment" className="mt-2 rounded-lg max-w-full h-auto"/>}
                         {c.pdf && <a href={c.pdf.url} download={c.pdf.name} className="text-blue-600 dark:text-blue-400 hover:underline">Download PDF</a>}
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-right">{new Date(c.date).toLocaleString()}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-right">
+                            {t('fromGuardianOf')} {getStudentName(c.studentId)} - {new Date(c.date).toLocaleString()}
+                        </p>
                     </div>
                 )) : (
                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">{t('noComplaints')}</p>

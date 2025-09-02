@@ -362,5 +362,4 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     );
 };
 
-// FIX: Add default export for the component.
 export default PrincipalManageStudents;

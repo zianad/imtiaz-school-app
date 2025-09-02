@@ -200,13 +200,11 @@ function AppContent() {
   const isProduction = (import.meta as any).env.PROD;
 
   useEffect(() => {
-    // FIX: Per Gemini guidelines, API key must be from VITE_API_KEY env var.
-    // Use import.meta.env for Vite environment variables
-    const apiKey = (import.meta as any).env.VITE_API_KEY;
-    if (apiKey) {
-      aiRef.current = new GoogleGenAI({ apiKey });
+    // FIX: Per Gemini API guidelines, the API key must be obtained from process.env.API_KEY.
+    if (process.env.API_KEY) {
+      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } else {
-      console.warn("Gemini API key not set. AI features will not be available for mobile.");
+      console.warn("Gemini API key not found in process.env.API_KEY. AI features will not be available for mobile.");
     }
   }, []);
   

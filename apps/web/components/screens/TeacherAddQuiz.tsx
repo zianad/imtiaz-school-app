@@ -1,17 +1,14 @@
 
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse, Type } from '@google/genai';
-// Fix: Add School import
 import { Quiz, Question, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
-// Fix: Add ThemeSwitcher import
 import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface TeacherAddQuizProps {
-    // Fix: Add school, toggleDarkMode, isDarkMode props
     school: School;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
@@ -62,7 +59,8 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
     };
     
     const handleGenerateQuiz = async () => {
-        const apiKey = (import.meta as any).env.VITE_API_KEY;
+        // FIX: Per Gemini API guidelines, the API key must be obtained from process.env.API_KEY.
+        const apiKey = process.env.API_KEY;
         if (!imageFile || !apiKey) {
             setError('Please upload an image first. API key must be set.');
             return;
