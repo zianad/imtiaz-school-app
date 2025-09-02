@@ -1,7 +1,7 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
 export const SUPER_ADMIN_CODE = "Lunallena11241984"; // This is what the user types in the login form.
-export const SUPER_ADMIN_EMAIL_PREFIX = "Lunallena1241984"; // This is the prefix for the actual Supabase user email.
+export const SUPER_ADMIN_EMAIL_PREFIX = "Lunallena11241984"; // This is the prefix for the actual Supabase user email.
 export const SUPER_ADMIN_PASSWORD = "Lunallena11241984";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
