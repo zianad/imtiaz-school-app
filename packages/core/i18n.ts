@@ -905,9 +905,10 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
     return translation;
   }, [language]);
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        {children}
-    </LanguageContext.Provider>
+  // FIX: Rewritten to use React.createElement to avoid JSX syntax in a .ts file.
+  return React.createElement(
+    LanguageContext.Provider,
+    { value: { language, setLanguage, t } },
+    children
   );
 };
