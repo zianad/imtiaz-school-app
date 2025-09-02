@@ -1,8 +1,10 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
-export const SUPER_ADMIN_CODE = "Lunallena11241984"; // This is what the user types in the login form.
-export const SUPER_ADMIN_EMAIL_PREFIX = "Lunallena11241984"; // This is the prefix for the actual user in Supabase Auth.
-export const SUPER_ADMIN_PASSWORD = "Lunallena11241984";
+// IMPORTANT: These credentials must match the super admin user created in the Supabase Auth dashboard.
+// The email will be "admin_imtiaz_app@superadmin.com".
+export const SUPER_ADMIN_CODE = "admin_imtiaz_app"; // This is what the user types in the login form.
+export const SUPER_ADMIN_EMAIL_PREFIX = "admin_imtiaz_app"; // This is the prefix for the actual user in Supabase Auth.
+export const SUPER_ADMIN_PASSWORD = "admin_imtiaz_app_password";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
 export const CLASSES = ['الفوج الأول', 'الفوج الثاني', 'الفوج الثالث', 'الفوج الرابع', 'الفوج الخامس'];
