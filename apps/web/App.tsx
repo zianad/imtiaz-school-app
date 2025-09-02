@@ -407,27 +407,12 @@ export default function App() {
   }, [session, handleLogout, navigateTo, t]);
   
   const handleLogin = useCallback(async (code: string) => {
-      if (code === SUPER_ADMIN_CODE) {
-          const mockSuperAdminSession = {
-              user: { 
-                  id: SUPER_ADMIN_CODE, 
-                  email: `${SUPER_ADMIN_CODE}@superadmin.com`,
-                  app_metadata: {},
-                  user_metadata: {},
-                  aud: 'authenticated',
-                  created_at: new Date().toISOString(),
-              },
-              access_token: 'super-admin-mock-token',
-              refresh_token: 'super-admin-mock-refresh',
-              expires_in: 3600,
-              token_type: 'bearer',
-          };
-          setSession(mockSuperAdminSession as any);
-          return;
-      }
-
-      const email = `${code}@school-app.com`;
+      const email = code === SUPER_ADMIN_CODE 
+          ? `${SUPER_ADMIN_CODE}@superadmin.com` 
+          : `${code}@school-app.com`;
+      
       const password = code;
+      
       const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
       if (error) { throw error; }
       if (!data.session) { throw new Error('Login failed: No session returned'); }
