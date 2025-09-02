@@ -1,7 +1,6 @@
-
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
-export const SUPER_ADMIN_CODE = "Lunallena11241984";
+export const SUPER_ADMIN_CODE = "Lunallena1241984";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
 export const CLASSES = ['الفوج الأول', 'الفوج الثاني', 'الفوج الثالث', 'الفوج الرابع', 'الفوج الخامس'];
