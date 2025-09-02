@@ -1,11 +1,10 @@
+import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
-import { Grade, Subject, EducationalStage, SchoolFeature } from './types';
-
-export const SUPER_ADMIN_CODE = "Lunallena11241984";
+// IMPORTANT: The super admin credentials here must match the super admin user in the Supabase Auth dashboard.
+export const SUPER_ADMIN_CODE = "Lunallena11241984"; // This is what the user types in the login form.
+export const SUPER_ADMIN_EMAIL_PREFIX = "lunallena11241984"; // This is used to construct the email, e.g., lunallena11241984@superadmin.com
+export const SUPER_ADMIN_PASSWORD = "Lunallena11241984";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
-
-export const AI_NOTE_GENERATION_WEEKLY_LIMIT = 50;
-export const API_CACHE_DURATION_MS = 3600 * 1000; // 1 hour
 
 export const CLASSES = ['الفوج الأول', 'الفوج الثاني', 'الفوج الثالث', 'الفوج الرابع', 'الفوج الخامس'];
 
@@ -21,7 +20,7 @@ export const STAGE_DETAILS = {
       'المستوى الأول ابتدائي', 'المستوى الثاني ابتدائي', 'المستوى الثالث ابتدائي', 
       'المستوى الرابع ابتدائي', 'المستوى الخامس ابتدائي', 'المستوى السادس ابتدائي'
     ],
-    subjects: [Subject.Arabic, Subject.French, Subject.Math]
+    subjects: [Subject.Arabic, Subject.French, Subject.Math, Subject.IslamicEducation, Subject.SocialStudies]
   },
   [EducationalStage.MIDDLE]: {
     label: 'المرحلة الإعدادية',
@@ -140,3 +139,86 @@ export const ALL_FEATURES_ENABLED: Record<SchoolFeature, boolean> = {
     guardianViewTalkingCards: true,
     guardianViewMemorization: true,
 };
+
+// FIX: Define and export MOCK_SCHOOLS for offline mode.
+export const MOCK_SCHOOLS: School[] = [
+  {
+    id: 'mock-school-1',
+    name: 'مدرسة النجاح النموذجية (تجريبي)',
+    logoUrl: 'https://i.imgur.com/3gXIM3w.png',
+    principals: {
+        [EducationalStage.PRIMARY]: [
+            { id: 'principal-1', name: 'مدير الابتدائي', loginCode: 'p1', stage: EducationalStage.PRIMARY }
+        ],
+        [EducationalStage.MIDDLE]: [
+            { id: 'principal-2', name: 'مدير الإعدادي', loginCode: 'p2', stage: EducationalStage.MIDDLE }
+        ]
+    },
+    isActive: true,
+    stages: [EducationalStage.PRE_SCHOOL, EducationalStage.PRIMARY, EducationalStage.MIDDLE, EducationalStage.HIGH],
+    featureFlags: ALL_FEATURES_ENABLED,
+    monthlyFeeAmount: 350,
+    transportationFee: 150,
+    students: [
+        {
+            id: 'student-1',
+            guardianCode: 'g1',
+            name: 'أحمد الصديق',
+            stage: EducationalStage.PRIMARY,
+            level: 'المستوى الخامس ابتدائي',
+            class: 'الفوج الأول',
+            grades: {
+                [Subject.Arabic]: [
+                    { subSubject: 'التراكيب', semester: 1, assignment: 1, score: 8 },
+                    { subSubject: 'التراكيب', semester: 1, assignment: 2, score: 7.5 },
+                ]
+            }
+        },
+        {
+            id: 'student-2',
+            guardianCode: 'g2',
+            name: 'فاطمة الزهراء',
+            stage: EducationalStage.MIDDLE,
+            level: 'الأولى إعدادي',
+            class: 'الفوج الثاني',
+            grades: {}
+        }
+    ],
+    teachers: [
+        {
+            id: 'teacher-1',
+            name: 'الأستاذة خديجة',
+            loginCode: 't1',
+            subjects: [Subject.Arabic, Subject.French],
+            assignments: {
+                'المستوى الخامس ابتدائي': ['الفوج الأول', 'الفوج الثاني'],
+                'المستوى السادس ابتدائي': ['الفوج الأول']
+            },
+            salary: 5000
+        }
+    ],
+    summaries: [],
+    exercises: [],
+    notes: [],
+    absences: [],
+    examPrograms: [],
+    notifications: [],
+    announcements: [],
+    complaints: [],
+    educationalTips: [],
+    monthlyFeePayments: [],
+    interviewRequests: [],
+    supplementaryLessons: [],
+    timetables: [],
+    quizzes: [],
+    projects: [],
+    libraryItems: [],
+    albumPhotos: [],
+    personalizedExercises: [],
+    unifiedAssessments: [],
+    talkingCards: [],
+    memorizationItems: [],
+    expenses: [],
+    feedback: [],
+  }
+];
