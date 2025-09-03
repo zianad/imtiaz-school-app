@@ -408,11 +408,12 @@ export default function App() {
     // Check for super admin is case-insensitive to identify the user role.
     const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
     
-    // Determine the email and password based on the user role.
+    // Determine the email based on the user role.
     const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
-    // For super admin, always use the correct, case-sensitive password from constants.
-    // For other users, the password is the code they entered.
-    const password = isSuperAdmin ? SUPER_ADMIN_CODE : code;
+    // For ALL users, the password is the exact code they entered, preserving case.
+    // This fixes the issue where the app was forcing a case-sensitive password from constants
+    // instead of using what the user actually typed.
+    const password = code;
     
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {
