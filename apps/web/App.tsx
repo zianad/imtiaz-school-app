@@ -407,14 +407,16 @@ export default function App() {
   }, [session, handleLogout, navigateTo]);
 
   const handleLogin = useCallback(async (code: string) => {
-    const isSuperAdmin = code === SUPER_ADMIN_CODE;
+    // Check for super admin is now case-insensitive.
+    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE;
     
     const email = isSuperAdmin
         ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
-    // The code entered in the form is always the password.
-    const password = code;
+    // For super admin, always use the canonical SUPER_ADMIN_CODE as the password.
+    // For other users, the code they type is their password.
+    const password = isSuperAdmin ? SUPER_ADMIN_CODE : code;
     
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {

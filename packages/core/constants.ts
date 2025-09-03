@@ -1,8 +1,8 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
 // IMPORTANT: The super admin credentials here must match the super admin user in the Supabase Auth dashboard.
-// The app will now always use the SUPER_ADMIN_CODE as the password for the SUPER_ADMIN_EMAIL.
-export const SUPER_ADMIN_CODE = "Lunallena11241984"; // This is what the user types in the login form.
+// The code is now checked case-insensitively, and the password sent is always the lowercase SUPER_ADMIN_CODE.
+export const SUPER_ADMIN_CODE = "lunallena11241984"; // The canonical code/password, likely lowercase in DB.
 export const SUPER_ADMIN_EMAIL = "lunallena11241984@superadmin.com"; // The exact email for the super admin.
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
