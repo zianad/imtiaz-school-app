@@ -104,6 +104,8 @@ const translations = {
     statisticsDashboard: 'لوحة الإحصائيات',
     interviewRequests: 'طلبات المقابلة',
     monthlyFees: 'الواجبات الشهرية',
+    // FIX: Add missing translation key
+    monthlyFee: 'الواجب الشهري',
     schoolManagement: 'إدارة المدرسة',
     importFromExcel: 'استيراد التلاميذ من ملف اكسل',
     importInstructions: "يجب أن يحتوي الملف على عمودين: العمود الأول لأسماء التلاميذ، والعمود الثاني للرمز السري الخاص بأوليائهم.",
@@ -170,7 +172,6 @@ const translations = {
     setMonthlyFee: 'تحديد الواجب الشهري',
     monthlyFeeAmountLabel: 'قيمة الواجب الشهري (درهم)',
     transportation: 'النقل',
-    monthlyFee: 'الواجب الشهري',
     totalAmount: 'المبلغ الإجمالي',
     setTransportationFee: 'تحديد رسوم النقل',
     transportationFeeAmountLabel: 'قيمة رسوم النقل (درهم)',
@@ -445,8 +446,13 @@ const translations = {
     // New keys for confirmation modal
     confirmDeleteItem: "هل أنت متأكد من رغبتك في حذف \"{item}\"؟ لا يمكن التراجع عن هذا الإجراء.",
     actions: "الإجراءات",
-    supabaseEmailConfirmationNoteTitle: "ملاحظة هامة",
-    supabaseEmailConfirmationNoteBody: "للسماح للمستخدمين الجدد (مديرين، أساتذة، أولياء أمور) بتسجيل الدخول، يرجى التأكد من إلغاء تفعيل خيار \"Confirm email\" في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase.",
+    supabaseSettingsChecklistTitle: "قائمة تحقق لإعدادات Supabase",
+    supabaseSettingsInstructions: "لضمان عمل التطبيق بشكل صحيح، يرجى التأكد من أن الإعدادات التالية مطبقة في مشروعك على Supabase (Authentication -> Settings):",
+    supabaseAllowSignups: "تفعيل خيار 'Allow new users to sign up'",
+    supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
+    // FIX: Add missing translation keys
+    supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
+    supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email' في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -548,6 +554,8 @@ const translations = {
     statisticsDashboard: 'Statistiques',
     interviewRequests: 'Demandes d\'entretien',
     monthlyFees: 'Frais mensuels',
+    // FIX: Add missing translation key
+    monthlyFee: 'Frais Mensuel',
     schoolManagement: 'Gestion de l\'école',
     importFromExcel: 'Importer depuis Excel',
     importInstructions: "Le fichier doit contenir deux colonnes : Noms des élèves et Codes des parents.",
@@ -860,8 +868,13 @@ const translations = {
     // New keys for confirmation modal
     confirmDeleteItem: "Êtes-vous sûr de vouloir supprimer \"{item}\" ? Cette action est irréversible.",
     actions: "Actions",
-    supabaseEmailConfirmationNoteTitle: "Note importante",
-    supabaseEmailConfirmationNoteBody: "Pour permettre aux nouveaux utilisateurs (directeurs, enseignants, parents) de se connecter, veuillez vous assurer de désactiver l'option \"Confirm email\" dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase.",
+    supabaseSettingsChecklistTitle: "Checklist des paramètres Supabase",
+    supabaseSettingsInstructions: "Pour assurer le bon fonctionnement de l'application, veuillez vérifier que les paramètres suivants sont appliqués dans votre projet Supabase (Authentication -> Settings) :",
+    supabaseAllowSignups: "Activer l'option 'Allow new users to sign up'",
+    supabaseDisableEmailConfirm: "Désactiver l'option 'Confirm email'",
+    // FIX: Add missing translation keys
+    supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
+    supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email' dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
   },
   en: {
     // ...
