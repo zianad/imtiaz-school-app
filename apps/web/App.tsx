@@ -1,10 +1,9 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to handle cases where `Session` is a class, which `import type` might not resolve correctly.
 import { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
-import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
+import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase, getStageForLevel, compressImage } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -414,6 +413,7 @@ export default function App() {
         ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
+    // For Super Admin, use the dedicated password. For others, the code is the password.
     const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });

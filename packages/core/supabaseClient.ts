@@ -1,4 +1,3 @@
-
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MOCK_SCHOOLS, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from './constants';

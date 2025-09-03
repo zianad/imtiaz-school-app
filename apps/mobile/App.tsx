@@ -1,9 +1,7 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
-import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
+import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
 import { Student, Subject, Summary, Exercise, Note, Absence, Grade, EducationalStage, MemorizationItem, School, Teacher, UserRole, Principal } from '../../packages/core/types';
 import MobileGuardianDashboard from './GuardianDashboard';
 import MobileGuardianSubjectMenu, { MobileGuardianPage } from './GuardianSubjectMenu';
@@ -364,6 +362,7 @@ function AppContent() {
         ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
+    // For Super Admin, use the dedicated password. For others, the code is the password.
     const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
