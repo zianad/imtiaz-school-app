@@ -74,8 +74,8 @@ const mockSupabaseClient = {
             setTimeout(() => {
                 // Special case for Super Admin
                 if (email === SUPER_ADMIN_EMAIL) {
-                    // In the simplified logic, the code IS the password.
-                    if (password === SUPER_ADMIN_CODE) {
+                    // The password check is case-insensitive to match the app logic.
+                    if (password.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase()) {
                         mockSession = { user: { id: SUPER_ADMIN_CODE, email: email }, expires_in: 3600 };
                         authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
                         resolve({ data: { session: mockSession }, error: null });

@@ -1,9 +1,9 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
-// IMPORTANT: The super admin credentials here must match the super admin user in the Supabase Auth dashboard.
-// The code is now checked case-insensitively, and the password sent is always the lowercase SUPER_ADMIN_CODE.
-export const SUPER_ADMIN_CODE = "lunallena11241984"; // The canonical code/password, likely lowercase in DB.
-export const SUPER_ADMIN_EMAIL = "lunallena11241984@superadmin.com"; // The exact email for the super admin.
+// IMPORTANT: The super admin email must match the user in Supabase Auth.
+// The code is used to identify the super admin (case-insensitively), and the exact code typed by the user is used as the password.
+export const SUPER_ADMIN_CODE = "Lunallena11241984";
+export const SUPER_ADMIN_EMAIL = "lunallena11241984@superadmin.com";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 
 export const CLASSES = ['الفوج الأول', 'الفوج الثاني', 'الفوج الثالث', 'الفوج الرابع', 'الفوج الخامس'];
