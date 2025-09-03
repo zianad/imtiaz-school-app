@@ -27,6 +27,7 @@ interface GuardianViewContentProps {
 
 const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ school, toggleDarkMode, isDarkMode, title, items, message, onBack, onLogout }) => {
     const { t } = useTranslation();
+    const isSummaryView = title === t('summaries');
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 animate-fade-in w-full relative">
@@ -46,7 +47,11 @@ const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ school, toggl
                     <div className="space-y-4">
                         {items.map((item) => (
                             <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border-r-4 border-blue-400 dark:border-blue-500">
-                                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100">{item.title || `تمرين بتاريخ: ${item.date ? new Date(item.date).toLocaleDateString('ar-DZ') : ''}`}</h2>
+                                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100">
+                                    {isSummaryView
+                                        ? item.title
+                                        : `تمرين بتاريخ: ${item.date ? new Date(item.date).toLocaleDateString('ar-DZ') : ''}`}
+                                </h2>
                                 {item.content && <p className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{item.content}</p>}
                                 {item.image && (
                                     <img src={item.image} alt="ملحق" className="mt-3 rounded-lg max-w-full h-auto shadow-sm" />
