@@ -237,14 +237,27 @@ function AppContent() {
         const promises = relatedTables.map(table => 
             supabase.from(table).select('*').in('school_id', schoolIds)
         );
-        const results = await Promise.all(promises);
         
-        const errors = results.map(r => r.error).filter(Boolean);
-        if (errors.length > 0) console.warn("Errors fetching some related data:", errors);
+        // Use Promise.allSettled to make data fetching resilient to errors in individual tables.
+        const results = await Promise.allSettled(promises);
 
         const relatedDataMap: { [key: string]: any[] } = {};
+        
         results.forEach((result, index) => {
-            relatedDataMap[relatedTables[index]] = result.data || [];
+            const tableName = relatedTables[index];
+            if (result.status === 'fulfilled') {
+                if (result.value.error) {
+                    // Log Supabase-specific errors from fulfilled promises
+                    console.warn(`Error fetching data for table '${tableName}':`, result.value.error.message);
+                    relatedDataMap[tableName] = [];
+                } else {
+                    relatedDataMap[tableName] = result.value.data || [];
+                }
+            } else {
+                // Log network or other errors from rejected promises
+                console.error(`Failed to fetch data for table '${tableName}':`, result.reason);
+                relatedDataMap[tableName] = []; // Ensure the key exists even on failure
+            }
         });
 
         // Step 3: Map the fetched related data back to their respective schools
