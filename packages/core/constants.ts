@@ -1,8 +1,9 @@
 import { Grade, Subject, EducationalStage, SchoolFeature, School } from './types';
 
 // IMPORTANT: The super admin email must match the user in Supabase Auth.
-// The code is used to identify the super admin (case-insensitively), and the exact code typed by the user is used as the password.
-export const SUPER_ADMIN_CODE = "Lunallena11241984";
+// The code below is used to identify the super admin (the check is case-insensitive).
+// The code itself (in lowercase) is the canonical password used for authentication.
+export const SUPER_ADMIN_CODE = "lunallena11241984";
 export const SUPER_ADMIN_EMAIL = "lunallena11241984@superadmin.com";
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 

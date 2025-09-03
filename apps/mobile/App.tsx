@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -334,12 +335,11 @@ function AppContent() {
     // Check for super admin is case-insensitive to identify the user role.
     const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
     
-    // Determine the email based on the user role.
+    // Determine the email and password.
     const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
-    // For ALL users, the password is the exact code they entered, preserving case.
-    // This fixes the issue where the app was forcing a case-sensitive password from constants
-    // instead of using what the user actually typed.
-    const password = code;
+    // For super admin, always use the canonical lowercase password to avoid case sensitivity issues.
+    // For other users, the password is the code they entered.
+    const password = isSuperAdmin ? SUPER_ADMIN_CODE : code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
 
