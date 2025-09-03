@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to handle cases where `Session` is a class, which `import type` might not resolve correctly.
@@ -258,10 +259,6 @@ export default function App() {
     setHistory([Page.UnifiedLogin]);
     setIsPrincipalImpersonatingTeacher(false);
     setIsSuperAdminImpersonating(false);
-    if (!isError) {
-        localStorage.removeItem('savedLoginCode');
-        localStorage.removeItem('rememberLoginCode');
-    }
   }, []);
 
   const fetchUserData = useCallback(async () => {

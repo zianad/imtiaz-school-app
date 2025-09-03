@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -63,16 +64,6 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
     const [code, setCode] = useState('');
     const { t } = useTranslation();
     const [status, setStatus] = useState<'idle' | 'checking' | 'incorrect'>('idle');
-    const [rememberMe, setRememberMe] = useState(false);
-
-    useEffect(() => {
-        const savedCode = localStorage.getItem('savedMobileLoginCode');
-        const shouldRemember = localStorage.getItem('rememberMobileLoginCode') === 'true';
-        if (savedCode && shouldRemember) {
-            setCode(savedCode);
-            setRememberMe(true);
-        }
-    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,13 +73,6 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
         try {
             await onLogin(code.trim());
             // On success, the parent component will re-render and this component will be unmounted.
-             if (rememberMe) {
-                localStorage.setItem('savedMobileLoginCode', code.trim());
-                localStorage.setItem('rememberMobileLoginCode', 'true');
-            } else {
-                localStorage.removeItem('savedMobileLoginCode');
-                localStorage.removeItem('rememberMobileLoginCode');
-            }
         } catch(err) {
             setStatus('incorrect');
             setTimeout(() => setStatus('idle'), 800);
@@ -117,16 +101,6 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
                         letterSpacing: '0.1em'
                     }}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '16px' }}>
-                    <input
-                        id="remember-me-mobile"
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        style={{ width: '1rem', height: '1rem' }}
-                    />
-                    <label htmlFor="remember-me-mobile" style={{ marginLeft: '8px', fontSize: '0.875rem', color: '#374151' }}>{t('rememberMe')}</label>
-                </div>
                 <button
                     type="submit"
                     style={{ 
@@ -225,7 +199,6 @@ function AppContent() {
     setSelectedStage(null);
     setPrincipalAction(null);
     setManagedSchool(null);
-    localStorage.removeItem('savedMobileLoginCode');
   }, []);
   
   const fetchUserData = useCallback(async () => {
