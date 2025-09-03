@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -329,15 +330,14 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-    // The password is the exact code entered by the user, preserving case.
-    const password = code;
-    
     // Check for super admin is case-insensitive to identify the user role.
     const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
     
-    const email = isSuperAdmin
-        ? SUPER_ADMIN_EMAIL
-        : `${code}@school-app.com`;
+    // Determine the email and password based on the user role.
+    const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
+    // For super admin, always use the correct, case-sensitive password from constants.
+    // For other users, the password is the code they entered.
+    const password = isSuperAdmin ? SUPER_ADMIN_CODE : code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
 
