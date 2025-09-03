@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
-import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL_PREFIX } from '../../packages/core/constants';
+import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
 import { Student, Subject, Summary, Exercise, Note, Absence, Grade, EducationalStage, MemorizationItem, School, Teacher, UserRole, Principal } from '../../packages/core/types';
 import MobileGuardianDashboard from './GuardianDashboard';
 import MobileGuardianSubjectMenu, { MobileGuardianPage } from './GuardianSubjectMenu';
@@ -32,8 +33,8 @@ import MobileSuperAdminDashboard from './SuperAdminDashboard';
 import MobileSuperAdminSchoolManagement from './SuperAdminSchoolManagement';
 import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-// FIX: The `Session` type is not correctly resolved. Using `import { type Session }` syntax which can fix module resolution issues.
-import type { Session } from '@supabase/supabase-js';
+// FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to resolve the module resolution issue.
+import { Session } from '@supabase/supabase-js';
 import MobileConfigErrorScreen from './ConfigErrorScreen';
 
 
@@ -310,7 +311,7 @@ function AppContent() {
         const email = session?.user?.email;
         if (!email) { handleLogout(); return; }
 
-        if (email.startsWith(SUPER_ADMIN_EMAIL_PREFIX)) {
+        if (email === SUPER_ADMIN_EMAIL) {
             setRole(UserRole.SuperAdmin);
         } else {
             const code = email.split('@')[0];
@@ -360,7 +361,7 @@ function AppContent() {
     const isSuperAdmin = code === SUPER_ADMIN_CODE;
     
     const email = isSuperAdmin
-        ? `${SUPER_ADMIN_EMAIL_PREFIX}@superadmin.com`
+        ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
     const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;

@@ -1,7 +1,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MOCK_SCHOOLS, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL_PREFIX, SUPER_ADMIN_PASSWORD } from './constants';
+import { MOCK_SCHOOLS, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
@@ -73,12 +73,10 @@ const mockSupabaseClient = {
     signInWithPassword: ({ email, password }: {email: string, password: string}) => {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                const emailPrefix = email.split('@')[0];
-
                 // Special case for Super Admin
-                if (emailPrefix === SUPER_ADMIN_EMAIL_PREFIX) {
+                if (email === SUPER_ADMIN_EMAIL) {
                     if (password === SUPER_ADMIN_PASSWORD) {
-                        mockSession = { user: { id: SUPER_ADMIN_EMAIL_PREFIX, email: email }, expires_in: 3600 };
+                        mockSession = { user: { id: SUPER_ADMIN_CODE, email: email }, expires_in: 3600 };
                         authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
                         resolve({ data: { session: mockSession }, error: null });
                     } else {
@@ -88,6 +86,7 @@ const mockSupabaseClient = {
                 }
 
                 // Logic for other users
+                const emailPrefix = email.split('@')[0];
                 const userMatch = findUser(emailPrefix);
                 // For regular users, password is their login/guardian code
                 if (userMatch && password === emailPrefix) {

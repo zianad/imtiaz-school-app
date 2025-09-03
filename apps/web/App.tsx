@@ -1,8 +1,10 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import type { Session } from '@supabase/supabase-js';
+// FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to handle cases where `Session` is a class, which `import type` might not resolve correctly.
+import { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
-import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL_PREFIX } from '../../packages/core/constants';
+import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase, getStageForLevel, compressImage } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -281,7 +283,7 @@ export default function App() {
             setIsLoading(false);
             // Handle user logic for no schools found if necessary
             const email = session?.user?.email;
-            if (email && email.startsWith(SUPER_ADMIN_EMAIL_PREFIX)) {
+            if (email && email === SUPER_ADMIN_EMAIL) {
                 setUserRole(UserRole.SuperAdmin);
                 navigateTo(Page.SuperAdminDashboard);
             }
@@ -349,7 +351,7 @@ export default function App() {
         const email = session?.user?.email;
         if (!email) { handleLogout(true); return; }
 
-        if (email.startsWith(SUPER_ADMIN_EMAIL_PREFIX)) {
+        if (email === SUPER_ADMIN_EMAIL) {
             setUserRole(UserRole.SuperAdmin);
             navigateTo(Page.SuperAdminDashboard);
         } else {
@@ -409,7 +411,7 @@ export default function App() {
     const isSuperAdmin = code === SUPER_ADMIN_CODE;
     
     const email = isSuperAdmin
-        ? `${SUPER_ADMIN_EMAIL_PREFIX}@superadmin.com`
+        ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
     const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
