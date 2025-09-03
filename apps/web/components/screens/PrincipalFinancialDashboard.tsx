@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { School, Student, Teacher, MonthlyFeePayment, Expense, EducationalStage } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
-import BackButton from '../../../../packages/ui/BackButton';
-import LogoutButton from '../../../../packages/ui/LogoutButton';
-import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
-import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import BackButton from '../common/BackButton';
+import LogoutButton from '../common/LogoutButton';
+import LanguageSwitcher from '../common/LanguageSwitcher';
+import ThemeSwitcher from '../common/ThemeSwitcher';
 
 interface PrincipalFinancialDashboardProps {
     school: School;

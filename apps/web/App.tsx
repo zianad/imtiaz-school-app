@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to handle cases where `Session` is a class, which `import type` might not resolve correctly.
@@ -189,7 +187,7 @@ export default function App() {
     });
     (selectedSchool.teachers || []).forEach(teacher => {
         if (teacher.name.toLowerCase().includes(lowerCaseQuery)) {
-            results.push({ type: 'teacher', title: teacher.name, description: teacher.subjects.join(', '), data: teacher, icon: '👨‍🏫' });
+            results.push({ type: 'teacher', title: teacher.name, description: teacher.subjects.map(s => t(s as any)).join(', '), data: teacher, icon: '👨‍🏫' });
         }
     });
     (selectedSchool.announcements || []).forEach(ann => {
@@ -200,13 +198,13 @@ export default function App() {
     
      (selectedSchool.summaries || []).forEach(item => {
         if (item.title.toLowerCase().includes(lowerCaseQuery) || item.content.toLowerCase().includes(lowerCaseQuery)) {
-            results.push({ type: 'summary', title: item.title, description: `${item.subject} - ${item.level}`, data: item, icon: '📝' });
+            results.push({ type: 'summary', title: item.title, description: `${t(item.subject as any)} - ${item.level}`, data: item, icon: '📝' });
         }
     });
 
     (selectedSchool.exercises || []).forEach(item => {
         if (item.content.toLowerCase().includes(lowerCaseQuery)) {
-            results.push({ type: 'exercise', title: `${t('exercise')} - ${item.subject}`, description: item.content.substring(0, 50) + '...', data: item, icon: '🏋️' });
+            results.push({ type: 'exercise', title: `${t('exercise')} - ${t(item.subject as any)}`, description: item.content.substring(0, 50) + '...', data: item, icon: '🏋️' });
         }
     });
 
@@ -522,6 +520,11 @@ export default function App() {
   }
   
   const renderPage = () => {
+    // This check must happen before renderPage because `selectedSchool` might be null
+    if (!selectedSchool && userRole !== UserRole.SuperAdmin && userRole !== null) {
+      return <div>Error: School data not found for user.</div>
+    }
+
     switch (currentPage) {
         case Page.UnifiedLogin:
              return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
@@ -654,7 +657,85 @@ export default function App() {
                 toggleDarkMode={toggleDarkMode}
                 isDarkMode={isDarkMode}
             />;
-        
+        case Page.GuardianViewSummaries:
+             return <GuardianViewContent
+                school={selectedSchool!}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+                title={t('summaries')}
+                items={selectedSchool!.summaries.filter(s => s.level === currentStudent!.level && s.class === currentStudent!.class && s.subject === selectedSubject)}
+                onBack={handleBack}
+                onLogout={handleLogout}
+            />;
+        case Page.GuardianViewExercises:
+             return <GuardianViewContent
+                school={selectedSchool!}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+                title={t('exercises')}
+                items={selectedSchool!.exercises.filter(e => e.level === currentStudent!.level && e.class === currentStudent!.class && e.subject === selectedSubject)}
+                onBack={handleBack}
+                onLogout={handleLogout}
+            />;
+        case Page.GuardianViewNotes:
+            return <GuardianViewNotes
+                school={selectedSchool!}
+                notes={selectedSchool!.notes.filter(n => n.subject === selectedSubject && n.status === 'approved')}
+                absences={selectedSchool!.absences.filter(a => a.subject === selectedSubject)}
+                student={currentStudent!}
+                title={t('guardianNotesTitle')}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+            />;
+        case Page.GuardianViewGrades:
+             return <GuardianViewGrades
+                school={selectedSchool!}
+                student={currentStudent!}
+                subject={selectedSubject!}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+             />;
+        case Page.GuardianViewExamProgram:
+             return <GuardianViewExamProgram
+                school={selectedSchool!}
+                programs={selectedSchool!.examPrograms.filter(p => p.level === currentStudent!.level && p.subject === selectedSubject)}
+                isFrenchUI={language === 'fr'}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+             />
+        case Page.GuardianViewTalkingCards:
+            return <GuardianViewTalkingCards
+                school={selectedSchool!}
+                cards={selectedSchool!.talkingCards.filter(c => c.level === currentStudent!.level && c.class === currentStudent!.class)}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+            />;
+        case Page.GuardianViewMemorization:
+             return <GuardianViewMemorization
+                school={selectedSchool!}
+                items={selectedSchool!.memorizationItems.filter(i => i.level === currentStudent!.level && i.class === currentStudent!.class)}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+            />;
+        case Page.GuardianViewAnnouncements:
+             return <GuardianViewAnnouncements
+                announcements={selectedSchool!.announcements.filter(a => a.targetAudience === 'guardians')}
+                school={selectedSchool!}
+                onBack={handleBack}
+                onLogout={handleLogout}
+                toggleDarkMode={toggleDarkMode}
+                isDarkMode={isDarkMode}
+             />
         // ... all other pages
         
         default:
@@ -662,14 +743,63 @@ export default function App() {
                  return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
             }
             // Fallback for any unhandled page or state
-            return <div className="text-center">
-                <h1 className="text-xl font-bold dark:text-white">Page Not Found or User Role Unidentified</h1>
-                <p className="dark:text-gray-300">Current Role: {userRole}</p>
-                <p className="dark:text-gray-300">Current Page: {currentPage}</p>
+            return <div className="text-center p-4 dark:text-white">
+                <h1 className="text-xl font-bold">Page Not Found or User Role Unidentified</h1>
+                <p>Current Role: {userRole}</p>
+                <p>Current Page: {currentPage}</p>
                 <button onClick={() => handleLogout()} className="mt-4 bg-red-500 text-white p-2 rounded">Logout</button>
             </div>;
     }
   };
 
   const mainContent = (
-      <main
+      <main className={`min-h-screen transition-colors duration-300 ${isDesktop && userRole === UserRole.Principal ? '' : 'flex items-center justify-center p-2 sm:p-4'}`}>
+        {renderPage()}
+      </main>
+  );
+
+  return (
+    <>
+      {selectedSchool && userRole !== UserRole.SuperAdmin && (
+        <SearchHeader
+          schoolName={selectedSchool.name}
+          query={searchQuery}
+          onQueryChange={handleSearchChange}
+          isSearching={isSearching}
+          results={searchResults}
+          onResultClick={handleResultClick}
+        />
+      )}
+      <div className={`${selectedSchool && userRole !== UserRole.SuperAdmin ? 'pt-24' : ''}`}>
+        {mainContent}
+      </div>
+      {selectedResult && (
+        <SearchResultModal result={selectedResult} onClose={() => setSelectedResult(null)} isDarkMode={isDarkMode} />
+      )}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+        onSubmit={async (rating, comments) => {
+          if (!activeSchoolId) return;
+          const feedback: Omit<Feedback, 'id'|'date'> = {
+            schoolId: activeSchoolId,
+            userRole,
+            rating,
+            comments,
+          };
+          const { error } = await supabase.from('feedback').insert(camelToSnakeCase(feedback));
+          if (error) alert(error.message);
+          else alert(t('feedbackThanks'));
+          setIsFeedbackModalOpen(false);
+        }}
+      />
+       <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        title={confirmModalContent.title}
+        message={confirmModalContent.message}
+        onConfirm={confirmModalContent.onConfirm}
+        onCancel={() => setIsConfirmModalOpen(false)}
+      />
+    </>
+  );
+}

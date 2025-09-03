@@ -38,7 +38,7 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({ result, onClose, 
                 return (
                     <>
                         <DetailRow label={t('teacherName')} value={teacher.name} />
-                        <DetailRow label={t('subject')} value={teacher.subjects.join(', ')} />
+                        <DetailRow label={t('subject')} value={teacher.subjects.map(s => t(s as any)).join(', ')} />
                         <DetailRow label={t('loginCode')} value={teacher.loginCode} />
                     </>
                 );
@@ -56,7 +56,7 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({ result, onClose, 
                 const summary = data as Summary;
                 return (
                      <>
-                        <DetailRow label={t('subject')} value={summary.subject} />
+                        <DetailRow label={t('subject')} value={t(summary.subject as any)} />
                         <DetailRow label={t('level')} value={`${summary.level} - ${summary.class}`} />
                         <DetailRow label={t('content' as any)}>
                             <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{summary.content}</p>
@@ -67,7 +67,7 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({ result, onClose, 
                  const exercise = data as Exercise;
                 return (
                      <>
-                        <DetailRow label={t('subject')} value={exercise.subject} />
+                        <DetailRow label={t('subject')} value={t(exercise.subject as any)} />
                         <DetailRow label={t('level')} value={`${exercise.level} - ${exercise.class}`} />
                         <DetailRow label={t('content' as any)}>
                             <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{exercise.content}</p>

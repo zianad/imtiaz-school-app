@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTranslation } from '../../../../packages/core/i18n';
 
