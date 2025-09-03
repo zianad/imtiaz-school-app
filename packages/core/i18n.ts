@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from './types';
 
@@ -444,6 +445,8 @@ const translations = {
     // New keys for confirmation modal
     confirmDeleteItem: "هل أنت متأكد من رغبتك في حذف \"{item}\"؟ لا يمكن التراجع عن هذا الإجراء.",
     actions: "الإجراءات",
+    supabaseEmailConfirmationNoteTitle: "ملاحظة هامة",
+    supabaseEmailConfirmationNoteBody: "للسماح للمستخدمين الجدد (مديرين، أساتذة، أولياء أمور) بتسجيل الدخول، يرجى التأكد من إلغاء تفعيل خيار \"Confirm email\" في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -857,6 +860,8 @@ const translations = {
     // New keys for confirmation modal
     confirmDeleteItem: "Êtes-vous sûr de vouloir supprimer \"{item}\" ? Cette action est irréversible.",
     actions: "Actions",
+    supabaseEmailConfirmationNoteTitle: "Note importante",
+    supabaseEmailConfirmationNoteBody: "Pour permettre aux nouveaux utilisateurs (directeurs, enseignants, parents) de se connecter, veuillez vous assurer de désactiver l'option \"Confirm email\" dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase.",
   },
   en: {
     // ...

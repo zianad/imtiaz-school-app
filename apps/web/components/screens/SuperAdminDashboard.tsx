@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef } from 'react';
 import { School, Page } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -72,6 +73,13 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                 >
                     📊 {t('feedbackAnalysis')}
                 </button>
+            </div>
+
+            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-400">
+                <h3 className="font-bold text-yellow-800 dark:text-yellow-200">{t('supabaseEmailConfirmationNoteTitle')}</h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    {t('supabaseEmailConfirmationNoteBody')}
+                </p>
             </div>
 
             <form onSubmit={handleAdd} className="mb-8 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
