@@ -5,7 +5,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 // FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to handle cases where `Session` is a class, which `import type` might not resolve correctly.
 import { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
-import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
+import { getBlankGrades, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL, SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase, getStageForLevel, compressImage } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -406,13 +406,12 @@ export default function App() {
 
   const handleLogin = useCallback(async (code: string) => {
     // Check for super admin is case-insensitive to identify the user role.
-    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
+    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase();
     
-    // Determine the email and password.
+    // Determine the email and password for the sign-in attempt.
     const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
-    // For super admin, always use the canonical lowercase password to avoid case sensitivity issues.
-    // For other users, the password is the code they entered.
-    const password = isSuperAdmin ? SUPER_ADMIN_CODE : code;
+    // For super admin, use the definitive password from constants. For all other users, their code is their password.
+    const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {
@@ -673,48 +672,4 @@ export default function App() {
   };
 
   const mainContent = (
-      <main className={`w-full max-w-7xl mx-auto transition-all duration-300 ${!session ? 'flex items-center justify-center h-full' : (isDesktop ? '' : 'pt-24')}`}>
-        {renderPage()}
-      </main>
-  );
-
-  return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''} bg-gray-100 dark:bg-gray-900 flex items-center p-4 font-sans transition-colors duration-300 relative`}>
-        {session && selectedSchool && userRole !== UserRole.SuperAdmin && !isDesktop &&
-            <SearchHeader 
-                schoolName={selectedSchool.name}
-                query={searchQuery}
-                onQueryChange={handleSearchChange}
-                isSearching={isSearching}
-                results={searchResults}
-                onResultClick={handleResultClick}
-            />
-        }
-        {mainContent}
-        {isFeedbackModalOpen && selectedSchoolId && (
-            <FeedbackModal
-                isOpen={isFeedbackModalOpen}
-                onClose={() => setIsFeedbackModalOpen(false)}
-                onSubmit={async (rating, comments) => {
-                    await supabase.from('feedback').insert(camelToSnakeCase({ userRole, schoolId: selectedSchoolId, rating, comments, date: new Date() }));
-                    setIsFeedbackModalOpen(false);
-                }}
-            />
-        )}
-        {selectedResult && (
-            <SearchResultModal result={selectedResult} onClose={() => setSelectedResult(null)} isDarkMode={isDarkMode} />
-        )}
-        <ConfirmationModal
-            isOpen={isConfirmModalOpen}
-            title={confirmModalContent.title}
-            message={confirmModalContent.message}
-            onConfirm={() => {
-                confirmModalContent.onConfirm();
-                setIsConfirmModalOpen(false);
-            }}
-            onCancel={() => setIsConfirmModalOpen(false)}
-        />
-    </div>
-  );
-  // #endregion
-}
+      <main
