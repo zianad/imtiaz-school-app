@@ -540,7 +540,6 @@ export default function App() {
                     const { data: schoolData, error: schoolError } = await supabase.from('schools').insert(camelToSnakeCase({
                         name,
                         logoUrl,
-                        principals: {},
                         isActive: true,
                         stages: [EducationalStage.PRE_SCHOOL, EducationalStage.PRIMARY, EducationalStage.MIDDLE, EducationalStage.HIGH],
                         featureFlags: ALL_FEATURES_ENABLED,
