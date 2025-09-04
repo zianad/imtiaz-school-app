@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, MOCK_SCHOOLS } from '../../packages/core/constants';
+import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, MOCK_SCHOOLS, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 
@@ -298,6 +298,145 @@ const App: React.FC = () => {
     setPage(Page.UnifiedLogin);
     setIsImpersonating(false);
   }, []);
+  
+  const handleAddSchool = async (name: string, principalCode: string, logo: string) => {
+    if (!name || !principalCode) {
+      alert(t('enterSchoolNameAndCode'));
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const { data: schoolData, error: schoolError } = await supabase
+        .from('schools')
+        .insert({
+          name,
+          logo_url: logo || null,
+          is_active: true,
+          stages: [EducationalStage.PRIMARY, EducationalStage.MIDDLE, EducationalStage.HIGH, EducationalStage.PRE_SCHOOL],
+          feature_flags: ALL_FEATURES_ENABLED,
+        })
+        .select()
+        .single();
+
+      if (schoolError) throw schoolError;
+      if (!schoolData) throw new Error("School creation failed.");
+
+      const newSchoolId = schoolData.id;
+
+      const { error: principalError } = await supabase
+        .from('principals')
+        .insert({
+          name: `${t('principal')} ${t('primaryStage')}`,
+          login_code: principalCode,
+          stage: EducationalStage.PRIMARY,
+          school_id: newSchoolId,
+        });
+      
+      if (principalError) {
+        await supabase.from('schools').delete().match({ id: newSchoolId });
+        throw principalError;
+      }
+
+      const { data, error: refreshError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+      if (refreshError) throw refreshError;
+      setSchools(snakeToCamelCase(data));
+
+    } catch (error: any) {
+      console.error("Error adding school:", error);
+      alert(`Failed to add school: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleDeleteSchool = (schoolId: string, schoolName: string) => {
+    showConfirmation(
+        t('confirmDeleteSchool', { schoolName }),
+        '',
+        async () => {
+            try {
+                setIsLoading(true);
+                const { error } = await supabase.from('schools').delete().match({ id: schoolId });
+                if (error) throw error;
+                setSchools(prev => prev.filter(s => s.id !== schoolId));
+            } catch (error: any) {
+                alert(`Failed to delete school: ${error.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    );
+  };
+  
+   const handleAddPrincipal = async (stage: EducationalStage, name: string, loginCode: string) => {
+    if (!school) return;
+    try {
+        setIsLoading(true);
+        const { error } = await supabase.from('principals').insert({
+            school_id: school.id,
+            stage,
+            name,
+            login_code: loginCode
+        });
+        if (error) throw error;
+        const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
+        if (refreshError) throw refreshError;
+        const camelSchool = snakeToCamelCase(refreshedSchool);
+        setSchool(camelSchool);
+        const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+        if(allSchoolsError) throw allSchoolsError;
+        setSchools(snakeToCamelCase(allSchools));
+    } catch (error: any) {
+        alert(`Failed to add principal: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleDeletePrincipal = (stage: EducationalStage, principalId: string, principalName: string) => {
+    if (!school) return;
+    showConfirmation(
+        t('confirmDeletePrincipal', { name: principalName }), '',
+        async () => {
+            try {
+                setIsLoading(true);
+                const { error } = await supabase.from('principals').delete().match({ id: principalId });
+                if (error) throw error;
+                const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
+                if (refreshError) throw refreshError;
+                const camelSchool = snakeToCamelCase(refreshedSchool);
+                setSchool(camelSchool);
+                const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+                if(allSchoolsError) throw allSchoolsError;
+                setSchools(snakeToCamelCase(allSchools));
+            } catch (error: any) {
+                alert(`Failed to delete principal: ${error.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    );
+  };
+  
+  const handleUpdatePrincipalCode = async (stage: EducationalStage, principalId: string, newCode: string) => {
+      if (!school) return;
+      try {
+          setIsLoading(true);
+          const { error: updateError } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
+          if (updateError) throw updateError;
+          const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
+          if (refreshError) throw refreshError;
+          const camelSchool = snakeToCamelCase(refreshedSchool);
+          setSchool(camelSchool);
+          const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+          if(allSchoolsError) throw allSchoolsError;
+          setSchools(snakeToCamelCase(allSchools));
+      } catch (error: any) {
+          alert(`Failed to update code: ${error.message}`);
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
   const renderPage = () => {
     if (!session && userRole !== UserRole.SuperAdmin && page !== Page.Maintenance) {
@@ -310,10 +449,10 @@ const App: React.FC = () => {
         case Page.UnifiedLogin:
              return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
         case Page.SuperAdminDashboard:
-            return <SuperAdminDashboard schools={schools} onAddSchool={async (name, code, logo) => { /* ... */ }} onDeleteSchool={(id, name) => { /* ... */ }} onManageSchool={(id) => { const s = schools.find(sc=>sc.id===id); if(s) { setSchool(s); setPage(Page.SuperAdminSchoolManagement); } }} onLogout={handleLogout} onNavigate={navigateTo}/>
+            return <SuperAdminDashboard schools={schools} onAddSchool={handleAddSchool} onDeleteSchool={handleDeleteSchool} onManageSchool={(id) => { const s = schools.find(sc=>sc.id===id); if(s) { setSchool(s); setPage(Page.SuperAdminSchoolManagement); } }} onLogout={handleLogout} onNavigate={navigateTo}/>
         case Page.SuperAdminSchoolManagement:
             if (!school) return null;
-            return <SuperAdminSchoolManagement school={school} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onToggleStatus={() => { /* ... */ }} onToggleStage={() => { /* ... */ }} onAddPrincipal={() => { /* ... */ }} onDeletePrincipal={() => { /* ... */ }} onUpdatePrincipalCode={() => { /* ... */ }} onToggleFeatureFlag={() => { /* ... */ }} onEnterFeaturePage={(p, s) => { setSelectedStage(s); setPage(p); setIsImpersonating(true); }} onUpdateSchoolDetails={() => {}} />;
+            return <SuperAdminSchoolManagement school={school} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onToggleStatus={() => { /* ... */ }} onToggleStage={() => { /* ... */ }} onAddPrincipal={handleAddPrincipal} onDeletePrincipal={handleDeletePrincipal} onUpdatePrincipalCode={handleUpdatePrincipalCode} onToggleFeatureFlag={() => { /* ... */ }} onEnterFeaturePage={(p, s) => { setSelectedStage(s); setPage(p); setIsImpersonating(true); }} onUpdateSchoolDetails={() => {}} />;
         case Page.PrincipalStageSelection:
             if (!school || !currentUser) return null;
             const principal = currentUser as Principal;
