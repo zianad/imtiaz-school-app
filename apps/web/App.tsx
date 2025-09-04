@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -181,7 +180,7 @@ const App: React.FC = () => {
     if (!isSupabaseConfigured && !MOCK_SCHOOLS) {
         return <ConfigErrorScreen />;
     }
-ْ
+
     return (
         <div className={`min-h-screen font-sans ${isDarkMode ? 'dark' : ''}`}>
             <div className="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
