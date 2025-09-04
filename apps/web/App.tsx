@@ -262,78 +262,81 @@ export default function App() {
     }
   }, []);
 
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (forceReload = false) => {
     setIsLoading(true);
     setFatalError(null);
 
     try {
-        // Step 1: Fetch base school data with directly related tables
-        const { data: schoolsData, error: schoolsError } = await supabase.from('schools').select(`
-            *, principals(*), students(*, grades(*)), teachers(*)
-        `);
+        const email = session?.user?.email;
+        if (!email) { handleLogout(true); return; }
 
-        if (schoolsError) throw schoolsError;
-        
-        const schoolIds = schoolsData.map(s => s.id);
-        if (schoolIds.length === 0) {
-            setSchools([]);
-            setIsLoading(false);
-            // Handle user logic for no schools found if necessary
-            const email = session?.user?.email;
-            if (email && email === SUPER_ADMIN_EMAIL) {
-                setUserRole(UserRole.SuperAdmin);
-                navigateTo(Page.SuperAdminDashboard);
+        if (email === SUPER_ADMIN_EMAIL) {
+            const { data: schoolsData, error: schoolsError } = await supabase
+                .from('schools')
+                .select('id, name, logo_url, is_active, principals(login_code)');
+            
+            if (schoolsError) throw schoolsError;
+            
+            const camelCaseSchools: any[] = snakeToCamelCase(schoolsData);
+             const transformedSchools = camelCaseSchools.map(school => ({
+                ...school,
+                principals: { // Flatten principals for easier access in UI
+                    [EducationalStage.PRE_SCHOOL]: [],
+                    [EducationalStage.PRIMARY]: [],
+                    [EducationalStage.MIDDLE]: [],
+                    [EducationalStage.HIGH]: [],
+                    ...school.principals.reduce((acc: any, p: any) => {
+                        if (p.stage) {
+                            if (!acc[p.stage]) acc[p.stage] = [];
+                            acc[p.stage].push(p);
+                        }
+                        return acc;
+                    }, {})
+                }
+            }));
+            
+            setSchools(transformedSchools as School[]);
+            setUserRole(UserRole.SuperAdmin);
+            navigateTo(Page.SuperAdminDashboard);
+
+        } else {
+            const code = email.split('@')[0];
+            
+            const { data: studentData } = await supabase.from('students').select('school_id').eq('guardian_code', code).maybeSingle();
+            const { data: teacherData } = await supabase.from('teachers').select('school_id').eq('login_code', code).maybeSingle();
+            const { data: principalData } = await supabase.from('principals').select('school_id').eq('login_code', code).maybeSingle();
+
+            const schoolId = studentData?.school_id || teacherData?.school_id || principalData?.school_id;
+
+            if (!schoolId) {
+                console.warn(`No role found for code: ${code}. Logging out.`);
+                handleLogout(true);
+                return;
             }
-            return;
-        }
-        
-        // Step 2: Fetch all other related data for all schools in parallel to avoid relationship errors
-        const relatedTables = [
-            'summaries', 'exercises', 'notes', 'exam_programs', 'notifications', 
-            'announcements', 'educational_tips', 'monthly_fee_payments', 'interview_requests', 
-            'supplementary_lessons', 'timetables', 'quizzes', 'projects', 'library_items', 
-            'album_photos', 'personalized_exercises', 'unified_assessments', 'talking_cards', 
-            'memorization_items', 'absences', 'complaints', 'expenses', 'feedback'
-        ];
 
-        const promises = relatedTables.map(table => 
-            supabase.from(table).select('*').in('school_id', schoolIds)
-        );
-        const results = await Promise.all(promises);
-        
-        const errors = results.map(r => r.error).filter(Boolean);
-        if (errors.length > 0) {
-            console.warn("Errors fetching some related data for schools:", errors);
-        }
+            const { data: schoolData, error: schoolError } = await supabase
+                .from('schools')
+                .select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*), supplementary_lessons(*), timetables(*), quizzes(*), projects(*), library_items(*), personalized_exercises(*), unified_assessments(*), talking_cards(*)`)
+                .eq('id', schoolId)
+                .single();
 
-        const relatedDataMap: { [key: string]: any[] } = {};
-        results.forEach((result, index) => {
-            relatedDataMap[relatedTables[index]] = result.data || [];
-        });
+            if (schoolError) throw schoolError;
 
-        // Step 3: Map the fetched related data back to their respective schools
-        for (const school of schoolsData) {
-            for (const tableName of relatedTables) {
-                (school as any)[tableName] = relatedDataMap[tableName].filter(item => item.school_id === school.id);
-            }
-        }
-        
-        const data = schoolsData;
-        const camelCaseSchools: any[] = snakeToCamelCase(data);
-        const transformedSchools = camelCaseSchools.map(school => {
+            const camelCaseSchool: any = snakeToCamelCase(schoolData);
+            
             const principalsByStage: School['principals'] = {};
-            (school.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
+            (camelCaseSchool.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
                 if (p.stage) {
                     if (!principalsByStage[p.stage]) principalsByStage[p.stage] = [];
                     principalsByStage[p.stage]!.push(p);
                 }
             });
 
-            return {
-                ...school,
+            const transformedSchool = {
+                ...camelCaseSchool,
                 principals: principalsByStage,
-                teachers: (school.teachers || []).map((t: Teacher) => ({ ...t, assignments: t.assignments || {} })),
-                students: (school.students || []).map((st: any) => ({
+                teachers: (camelCaseSchool.teachers || []).map((t: Teacher) => ({ ...t, assignments: t.assignments || {} })),
+                students: (camelCaseSchool.students || []).map((st: any) => ({
                     ...st,
                     grades: (st.grades || []).reduce((acc: any, g: Grade & { subject: Subject }) => {
                         if (g.subject) { (acc[g.subject] = acc[g.subject] || []).push(g); }
@@ -341,58 +344,25 @@ export default function App() {
                     }, {}),
                 })),
             };
-        });
-        
-        setSchools(transformedSchools as School[]);
 
-        const email = session?.user?.email;
-        if (!email) { handleLogout(true); return; }
-
-        if (email === SUPER_ADMIN_EMAIL) {
-            setUserRole(UserRole.SuperAdmin);
-            navigateTo(Page.SuperAdminDashboard);
-        } else {
-            const code = email.split('@')[0];
-            let userFound = false;
-            for (const school of transformedSchools) {
-                const student = school.students.find((s: Student) => s.guardianCode === code);
-                if (student) {
-                    setSelectedSchoolId(school.id);
-                    setCurrentStudent(student);
-                    setUserRole(UserRole.Guardian);
-                    userFound = true;
-                    break;
-                }
-                const teacher = school.teachers.find((t: Teacher) => t.loginCode === code);
-                if (teacher) {
-                    if (!teacher.assignments) teacher.assignments = {};
-                    setSelectedSchoolId(school.id);
-                    setCurrentTeacher(teacher);
-                    setUserRole(UserRole.Teacher);
-                    userFound = true;
-                    break;
-                }
-                let foundPrincipal: Principal | null = null;
-                let principalAccessibleStages: EducationalStage[] = [];
-                for (const stageStr in school.principals) {
-                    const stage = stageStr as EducationalStage;
-                    const principalInStage = school.principals[stage]?.find((p: Principal) => p.loginCode === code);
-                    if(principalInStage) {
-                        foundPrincipal = principalInStage;
-                        principalAccessibleStages.push(stage);
-                    }
-                }
-                if (foundPrincipal) {
-                    setSelectedSchoolId(school.id);
-                    setPrincipalStages(principalAccessibleStages);
-                    setUserRole(UserRole.Principal);
-                    userFound = true;
-                    break;
-                }
-            }
-            if (!userFound) {
-                 console.warn(`No role found for code: ${code}. Logging out.`);
-                 handleLogout(true);
+            setSchools([transformedSchool as School]);
+            setSelectedSchoolId(schoolId);
+            
+            if (studentData) {
+                const student = transformedSchool.students.find((s: Student) => s.guardianCode === code);
+                setCurrentStudent(student);
+                setUserRole(UserRole.Guardian);
+            } else if (teacherData) {
+                const teacher = transformedSchool.teachers.find((t: Teacher) => t.loginCode === code);
+                if (teacher && !teacher.assignments) teacher.assignments = {};
+                setCurrentTeacher(teacher);
+                setUserRole(UserRole.Teacher);
+            } else if (principalData) {
+                const principalAccessibleStages = Object.entries(transformedSchool.principals)
+                    .filter(([_, principals]) => (principals as Principal[]).some(p => p.loginCode === code))
+                    .map(([stage]) => stage as EducationalStage);
+                setPrincipalStages(principalAccessibleStages);
+                setUserRole(UserRole.Principal);
             }
         }
     } catch (error: any) {
@@ -403,6 +373,7 @@ export default function App() {
         setIsLoading(false);
     }
   }, [session, handleLogout, navigateTo]);
+
 
   const handleLogin = useCallback(async (code: string) => {
     const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase();
@@ -547,14 +518,14 @@ export default function App() {
 
                     const schoolId = schoolData[0].id;
                     const { error: principalError } = await supabase.from('principals').insert(camelToSnakeCase({ name: `مدير ${name}`, loginCode: principalCode, stage: EducationalStage.PRIMARY, schoolId }));
-                    if(principalError) { alert(principalError.message); } else { await fetchUserData(); }
+                    if(principalError) { alert(principalError.message); } else { await fetchUserData(true); }
                 }}
                 onDeleteSchool={(schoolId, schoolName) => handleOpenConfirmModal(
                     t('confirmDeleteSchool', { schoolName }),
                     ``,
                     async () => {
                         await supabase.from('schools').delete().match({ id: schoolId });
-                        await fetchUserData();
+                        await fetchUserData(true);
                     }
                 )}
                 onManageSchool={(schoolId) => {
@@ -573,11 +544,11 @@ export default function App() {
                 onLogout={handleLogout}
                 onUpdateSchoolDetails={async (schoolId, name, logoUrl) => {
                     const { error } = await supabase.from('schools').update(camelToSnakeCase({ name, logoUrl })).match({ id: schoolId });
-                    if (error) alert(error.message); else await fetchUserData();
+                    if (error) alert(error.message); else await fetchUserData(true);
                 }}
                 onToggleStatus={async () => {
                     const { error } = await supabase.from('schools').update({ is_active: !selectedSchool!.isActive }).match({ id: selectedSchool!.id });
-                    if (error) alert(error.message); else await fetchUserData();
+                    if (error) alert(error.message); else await fetchUserData(true);
                 }}
                 onToggleStage={async (stage) => {
                     const currentStages = selectedSchool!.stages || [];
@@ -585,27 +556,27 @@ export default function App() {
                         ? currentStages.filter(s => s !== stage)
                         : [...currentStages, stage];
                     const { error } = await supabase.from('schools').update({ stages: newStages }).match({ id: selectedSchool!.id });
-                    if (error) alert(error.message); else await fetchUserData();
+                    if (error) alert(error.message); else await fetchUserData(true);
                 }}
                 onToggleFeatureFlag={async (feature) => {
                     const currentFlags = selectedSchool!.featureFlags || {};
                     const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
                     const { error } = await supabase.from('schools').update({ feature_flags: newFlags }).match({ id: selectedSchool!.id });
-                    if (error) alert(error.message); else await fetchUserData();
+                    if (error) alert(error.message); else await fetchUserData(true);
                 }}
                 onAddPrincipal={async (stage, name, loginCode) => {
                     const { data: signUpData, error: signUpError } = await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
                     if (signUpError && signUpError.message !== 'User already registered') { alert(signUpError.message); return; }
 
                     const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId: selectedSchool!.id }));
-                    if (error) alert(error.message); else await fetchUserData();
+                    if (error) alert(error.message); else await fetchUserData(true);
                 }}
                 onDeletePrincipal={async (stage, principalId, principalName) => handleOpenConfirmModal(
                     t('confirmDeletePrincipal', { name: principalName }),
                     ``,
                     async () => {
                         const { error } = await supabase.from('principals').delete().match({ id: principalId });
-                        if (error) alert(error.message); else await fetchUserData();
+                        if (error) alert(error.message); else await fetchUserData(true);
                     }
                 )}
                 onUpdatePrincipalCode={async (stage, principalId, newCode) => { /* Logic to update user password in Supabase Auth */ }}

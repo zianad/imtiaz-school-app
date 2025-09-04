@@ -70,28 +70,62 @@ export default function App() {
     setPage('login');
   }, []);
 
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (forceReload = false) => {
     setIsLoading(true);
     setFatalError(null);
     try {
-        const { data, error } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*)`);
-        if (error) throw error;
-        
-        const camelCaseSchools: any[] = snakeToCamelCase(data);
-        const transformedSchools = camelCaseSchools.map(school => {
+        const email = session?.user?.email;
+        if (!email) { handleLogout(); return; }
+
+        if (email === SUPER_ADMIN_EMAIL) {
+            const { data, error } = await supabase.from('schools').select(`id, name, logo_url, is_active, principals(login_code, stage)`);
+            if (error) throw error;
+            const camelCaseSchools: any[] = snakeToCamelCase(data);
+            const transformedSchools = camelCaseSchools.map(school => {
+                 const principalsByStage: School['principals'] = {};
+                (school.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
+                    if (p.stage) {
+                        if (!principalsByStage[p.stage]) principalsByStage[p.stage] = [];
+                        principalsByStage[p.stage]!.push(p);
+                    }
+                });
+                return { ...school, principals: principalsByStage };
+            });
+
+            setSchools(transformedSchools as School[]);
+            setUserRole(UserRole.SuperAdmin);
+            setPage('superAdminDashboard');
+        } else {
+            const code = email.split('@')[0];
+            const { data: studentData } = await supabase.from('students').select('school_id').eq('guardian_code', code).maybeSingle();
+            const { data: teacherData } = await supabase.from('teachers').select('school_id').eq('login_code', code).maybeSingle();
+            const { data: principalData } = await supabase.from('principals').select('school_id').eq('login_code', code).maybeSingle();
+
+            const schoolId = studentData?.school_id || teacherData?.school_id || principalData?.school_id;
+
+            if (!schoolId) {
+                console.warn(`No role found for code: ${code}. Logging out.`);
+                handleLogout();
+                return;
+            }
+
+            const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*)`).eq('id', schoolId).single();
+            if (schoolError) throw schoolError;
+
+            const camelCaseSchool: any = snakeToCamelCase(schoolData);
             const principalsByStage: School['principals'] = {};
-            (school.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
+            (camelCaseSchool.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
                 if (p.stage) {
                     if (!principalsByStage[p.stage]) principalsByStage[p.stage] = [];
                     principalsByStage[p.stage]!.push(p);
                 }
             });
 
-            return {
-                ...school,
+            const transformedSchool = {
+                ...camelCaseSchool,
                 principals: principalsByStage,
-                teachers: (school.teachers || []).map((t: Teacher) => ({ ...t, assignments: t.assignments || {} })),
-                students: (school.students || []).map((st: any) => ({
+                teachers: (camelCaseSchool.teachers || []).map((t: Teacher) => ({ ...t, assignments: t.assignments || {} })),
+                students: (camelCaseSchool.students || []).map((st: any) => ({
                     ...st,
                     grades: (st.grades || []).reduce((acc: any, g: Grade & { subject: Subject }) => {
                         if (g.subject) { (acc[g.subject] = acc[g.subject] || []).push(g); }
@@ -99,59 +133,28 @@ export default function App() {
                     }, {}),
                 })),
             };
-        });
-        
-        setSchools(transformedSchools as School[]);
+            
+            setSelectedSchool(transformedSchool as School);
 
-        const email = session?.user?.email;
-        if (!email) { handleLogout(); return; }
-
-        if (email === SUPER_ADMIN_EMAIL) {
-            setUserRole(UserRole.SuperAdmin);
-            setPage('superAdminDashboard');
-        } else {
-            const code = email.split('@')[0];
-            let userFound = false;
-            for (const school of transformedSchools) {
-                const student = school.students.find((s: Student) => s.guardianCode === code);
-                if (student) {
-                    setSelectedSchool(school);
-                    setCurrentStudent(student);
-                    setUserRole(UserRole.Guardian);
-                    setPage('guardianDashboard');
-                    userFound = true;
-                    break;
-                }
-                const teacher = school.teachers.find((t: Teacher) => t.loginCode === code);
-                if (teacher) {
-                    if (!teacher.assignments) teacher.assignments = {};
-                    setSelectedSchool(school);
-                    setCurrentTeacher(teacher);
-                    setUserRole(UserRole.Teacher);
-                    setPage('teacherDashboard');
-                    userFound = true;
-                    break;
-                }
-                let foundPrincipal: Principal | null = null;
-                let principalAccessibleStages: EducationalStage[] = [];
-                for (const stageStr in school.principals) {
-                    const stage = stageStr as EducationalStage;
-                    const principalInStage = school.principals[stage]?.find((p: Principal) => p.loginCode === code);
-                    if(principalInStage) {
-                        foundPrincipal = principalInStage;
-                        principalAccessibleStages.push(stage);
-                    }
-                }
-                if (foundPrincipal) {
-                    setSelectedSchool(school);
-                    setPrincipalStages(principalAccessibleStages);
-                    setUserRole(UserRole.Principal);
-                    setPage('principalStageSelection');
-                    userFound = true;
-                    break;
-                }
+            if (studentData) {
+                const student = transformedSchool.students.find((s: Student) => s.guardianCode === code);
+                setCurrentStudent(student);
+                setUserRole(UserRole.Guardian);
+                setPage('guardianDashboard');
+            } else if (teacherData) {
+                const teacher = transformedSchool.teachers.find((t: Teacher) => t.loginCode === code);
+                if (teacher && !teacher.assignments) teacher.assignments = {};
+                setCurrentTeacher(teacher);
+                setUserRole(UserRole.Teacher);
+                setPage('teacherDashboard');
+            } else if (principalData) {
+                const principalAccessibleStages = Object.entries(transformedSchool.principals)
+                    .filter(([_, principals]) => (principals as Principal[]).some(p => p.loginCode === code))
+                    .map(([stage]) => stage as EducationalStage);
+                setPrincipalStages(principalAccessibleStages);
+                setUserRole(UserRole.Principal);
+                setPage('principalStageSelection');
             }
-             if (!userFound) { handleLogout(); }
         }
     } catch (error: any) {
         console.error("Fatal error during data fetch:", error);
@@ -201,12 +204,12 @@ export default function App() {
     if (type === 'summary') data.title = title;
 
     const { error } = await supabase.from(type === 'summary' ? 'summaries' : 'exercises').insert(data);
-    if (error) alert(error.message); else await fetchUserData();
+    if (error) alert(error.message); else await fetchUserData(true);
   };
 
   const handleDeleteContent = async (type: 'summary' | 'exercise', id: number) => {
     const { error } = await supabase.from(type === 'summary' ? 'summaries' : 'exercises').delete().match({ id });
-    if (error) alert(error.message); else await fetchUserData();
+    if (error) alert(error.message); else await fetchUserData(true);
   };
 
   const handleSaveNote = async (studentIds: string[], observation: string) => {
@@ -222,7 +225,7 @@ export default function App() {
         status: 'pending',
         date: new Date(),
     });
-    if (error) alert(error.message); else { alert('Note sent for review!'); await fetchUserData(); }
+    if (error) alert(error.message); else { alert('Note sent for review!'); await fetchUserData(true); }
   };
   
   const handleMarkAbsent = async (studentIds: string[]) => {
@@ -237,16 +240,16 @@ export default function App() {
         date: new Date(),
     }));
     const { error } = await supabase.from('absences').insert(absenceData);
-    if (error) alert(error.message); else { alert('Absence marked.'); await fetchUserData(); }
+    if (error) alert(error.message); else { alert('Absence marked.'); await fetchUserData(true); }
   };
 
   const handleSaveGrades = async (subject: Subject, grades: Grade[]) => {
       if (!studentForGrading) return;
-      const { error } = await supabase.from('grades').delete().match({ student_id: studentForGrading.id, subject: subject });
-      if (error) { alert(error.message); return; }
+      await supabase.from('grades').delete().match({ student_id: studentForGrading.id, subject: subject });
 
       const newGrades = grades.filter(g => g.score !== null).map(g => ({
           student_id: studentForGrading.id,
+          school_id: selectedSchool!.id,
           subject: subject,
           sub_subject: g.subSubject,
           semester: g.semester,
@@ -259,12 +262,12 @@ export default function App() {
       } else {
         alert('Grades saved!'); setPage('teacherStudentSelection');
       }
-      await fetchUserData();
+      await fetchUserData(true);
   };
 
   const handlePrincipalNoteReview = async (noteId: number, approve: boolean) => {
     const { error } = await supabase.from('notes').update({ status: approve ? 'approved' : 'rejected' }).match({ id: noteId });
-    if(error) alert(error.message); else await fetchUserData();
+    if(error) alert(error.message); else await fetchUserData(true);
   }
 
   // #endregion

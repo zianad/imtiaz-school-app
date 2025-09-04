@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useRef } from 'react';
 import { School, Page } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -114,14 +111,14 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
             </form>
             
             <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 rounded-r-lg">
-                {/* FIX: Add missing translation keys */}
-                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseEmailConfirmationNoteTitle' as any)}</h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseEmailConfirmationNoteBody' as any)}</p>
+                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseEmailConfirmationNoteTitle')}</h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseEmailConfirmationNoteBody')}</p>
                 <div className="mt-3">
-                    <h4 className="font-semibold text-gray-700 dark:text-gray-300">{t('supabaseSettingsChecklistTitle' as any)}</h4>
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-300">{t('supabaseSettingsChecklistTitle')}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('supabaseSettingsInstructions')}</p>
                     <ul className="list-disc list-inside text-sm mt-1 text-gray-600 dark:text-gray-300">
-                        <li>{t('supabaseAllowSignups' as any)}</li>
-                        <li>{t('supabaseDisableEmailConfirm' as any)}</li>
+                        <li>{t('supabaseAllowSignups')}</li>
+                        <li>{t('supabaseDisableEmailConfirm')}</li>
                     </ul>
                 </div>
             </div>

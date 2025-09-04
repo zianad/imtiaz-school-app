@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from './types';
 
@@ -436,21 +434,19 @@ const translations = {
     supplementaryLesson: "درس داعم",
     close: "إغلاق",
     details: "التفاصيل",
-    // FIX: Add missing translation keys
     principal: "مدير",
     contentDomainOptional: "المجال (اختياري)",
     changeStage: "تغيير المرحلة",
     dashboard: "لوحة التحكم",
     miscellaneous: "متنوع",
-    // New keys for confirmation modal
     confirmDeleteItem: "هل أنت متأكد من رغبتك في حذف \"{item}\"؟ لا يمكن التراجع عن هذا الإجراء.",
     actions: "الإجراءات",
-    // FIX: Add missing translation keys
-    supabaseEmailConfirmationNoteTitle: "ملاحظة هامة حول تأكيد البريد الإلكتروني في Supabase",
-    supabaseEmailConfirmationNoteBody: "بشكل افتراضي، يتطلب Supabase من المستخدمين الجدد تأكيد بريدهم الإلكتروني. لتسهيل عملية تسجيل الدخول باستخدام الرموز، يجب تعطيل هذا الإعداد.",
-    supabaseSettingsChecklistTitle: "الإعدادات المطلوبة في لوحة تحكم Supabase:",
-    supabaseAllowSignups: "السماح بالتسجيلات الجديدة (Enable Sign-ups).",
-    supabaseDisableEmailConfirm: "تعطيل تأكيد البريد الإلكتروني (Disable 'Enable email confirmation').",
+    supabaseSettingsChecklistTitle: "قائمة تحقق لإعدادات Supabase",
+    supabaseSettingsInstructions: "لضمان عمل التطبيق بشكل صحيح، يرجى التأكد من أن الإعدادات التالية مطبقة في مشروعك على Supabase (Authentication -> Settings):",
+    supabaseAllowSignups: "تفعيل خيار 'Allow new users to sign up'",
+    supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
+    supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
+    supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email' في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -861,15 +857,14 @@ const translations = {
     changeStage: "Changer de cycle",
     dashboard: "Tableau de bord",
     miscellaneous: "Divers",
-    // New keys for confirmation modal
     confirmDeleteItem: "Êtes-vous sûr de vouloir supprimer \"{item}\" ? Cette action est irréversible.",
     actions: "Actions",
-    // FIX: Add missing translation keys
-    supabaseEmailConfirmationNoteTitle: "Note importante sur la confirmation par e-mail dans Supabase",
-    supabaseEmailConfirmationNoteBody: "Par défaut, Supabase demande aux nouveaux utilisateurs de confirmer leur e-mail. Pour simplifier la connexion avec des codes, ce paramètre doit être désactivé.",
-    supabaseSettingsChecklistTitle: "Paramètres requis dans votre tableau de bord Supabase :",
-    supabaseAllowSignups: "Autoriser les nouvelles inscriptions (Enable Sign-ups).",
-    supabaseDisableEmailConfirm: "Désactiver la confirmation par e-mail (Disable 'Enable email confirmation').",
+    supabaseSettingsChecklistTitle: "Checklist des paramètres Supabase",
+    supabaseSettingsInstructions: "Pour assurer le bon fonctionnement de l'application, veuillez vérifier que les paramètres suivants sont appliqués dans votre projet Supabase (Authentication -> Settings) :",
+    supabaseAllowSignups: "Activer l'option 'Allow new users to sign up'",
+    supabaseDisableEmailConfirm: "Désactiver l'option 'Confirm email'",
+    supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
+    supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email' dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
   },
   en: {
     // ...
