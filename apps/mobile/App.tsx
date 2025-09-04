@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -392,9 +390,10 @@ function AppContent() {
                 if (error) alert(error.message); else await fetchUserData();
             }}
             onAddPrincipal={async (schoolId, stage, name, loginCode) => {
+                const trimmedLoginCode = loginCode.trim();
                 // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
-                const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId }));
+                await (supabase.auth as any).signUp({ email: `${trimmedLoginCode}@school-app.com`, password: trimmedLoginCode });
+                const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode: trimmedLoginCode, stage, schoolId }));
                 if (error) alert(error.message); else await fetchUserData();
             }}
             onDeletePrincipal={async (schoolId, stage, principalId) => {
@@ -433,9 +432,10 @@ function AppContent() {
                     stage={selectedStage}
                     teachers={selectedSchool.teachers}
                     onAddTeacher={async (teacher) => {
+                         const teacherWithTrimmedCode = { ...teacher, loginCode: teacher.loginCode.trim() };
                          // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                         await (supabase.auth as any).signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode });
-                         await supabase.from('teachers').insert(camelToSnakeCase({ ...teacher, schoolId: selectedSchool.id }));
+                         await (supabase.auth as any).signUp({ email: `${teacherWithTrimmedCode.loginCode}@school-app.com`, password: teacherWithTrimmedCode.loginCode });
+                         await supabase.from('teachers').insert(camelToSnakeCase({ ...teacherWithTrimmedCode, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
                     onUpdateTeacher={async (updatedTeacher) => {
@@ -453,9 +453,10 @@ function AppContent() {
                     stage={selectedStage}
                     students={selectedSchool.students.filter(s => s.stage === selectedStage)}
                     onAddStudent={async (student) => {
+                         const studentWithTrimmedCode = { ...student, guardianCode: student.guardianCode.trim() };
                          // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                         await (supabase.auth as any).signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode });
-                         await supabase.from('students').insert(camelToSnakeCase({ ...student, schoolId: selectedSchool.id }));
+                         await (supabase.auth as any).signUp({ email: `${studentWithTrimmedCode.guardianCode}@school-app.com`, password: studentWithTrimmedCode.guardianCode });
+                         await supabase.from('students').insert(camelToSnakeCase({ ...studentWithTrimmedCode, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
                     onDeleteStudent={async (studentId) => {
