@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
-import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
+import { getBlankGrades, SUPER_ADMIN_LOGIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase, getStageForLevel, compressImage } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -405,17 +405,15 @@ export default function App() {
   }, [session, handleLogout, navigateTo]);
 
   const handleLogin = useCallback(async (code: string) => {
-    // Check if the user is the Super Admin based on the login code.
-    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
+    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase();
     
-    // Construct the email based on the user type.
     const email = isSuperAdmin
         ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
-    // For all users, the code they enter in the form is their password.
-    // The Super Admin's password must be set to match SUPER_ADMIN_CODE in the Supabase dashboard.
-    const password = code;
+    const password = isSuperAdmin 
+        ? SUPER_ADMIN_PASSWORD
+        : code;
     
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { UserRole, Student, Teacher, School, Subject, EducationalStage, Summary, Exercise, Note, Grade, Absence, Principal, Announcement, Complaint, EducationalTip, AlbumPhoto, InterviewRequest, MonthlyFeePayment, MemorizationItem } from '../../packages/core/types';
-import { SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
+import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { snakeToCamelCase, camelToSnakeCase, getStageForLevel } from '../../packages/core/utils';
 
@@ -163,9 +163,9 @@ export default function App() {
   }, [session, handleLogout]);
 
   const handleLogin = useCallback(async (code: string) => {
-    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
+    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase();
     const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
-    const password = code;
+    const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
     const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
     if (error) throw error;
   }, []);
