@@ -273,7 +273,7 @@ export default function App() {
         if (email === SUPER_ADMIN_EMAIL) {
             const { data: schoolsData, error: schoolsError } = await supabase
                 .from('schools')
-                .select('id, name, logo_url, is_active, principals(login_code)');
+                .select('id, name, logo_url, is_active, stages, principals(login_code, stage)');
             
             if (schoolsError) throw schoolsError;
             

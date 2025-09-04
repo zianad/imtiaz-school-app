@@ -78,7 +78,7 @@ export default function App() {
         if (!email) { handleLogout(); return; }
 
         if (email === SUPER_ADMIN_EMAIL) {
-            const { data, error } = await supabase.from('schools').select(`id, name, logo_url, is_active, principals(login_code, stage)`);
+            const { data, error } = await supabase.from('schools').select(`id, name, logo_url, is_active, stages, principals(login_code, stage)`);
             if (error) throw error;
             const camelCaseSchools: any[] = snakeToCamelCase(data);
             const transformedSchools = camelCaseSchools.map(school => {
