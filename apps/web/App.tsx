@@ -1,7 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-// FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. `Session` is a type and should be imported using `import type`.
-import type { Session } from '@supabase/supabase-js';
 import { Page, UserRole, Subject, Summary, Exercise, Note, ExamProgram, Student, Grade, Absence, Notification, School, Teacher, Announcement, Complaint, EducationalTip, Language, SchoolFeature, MonthlyFeePayment, InterviewRequest, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, UnifiedAssessment, EducationalStage, Hotspot, TalkingCard, MemorizationItem, Principal, Expense, Feedback, Question, SearchResult, SearchResultType, SearchableContent } from '../../packages/core/types';
 import { getBlankGrades, SUPER_ADMIN_CODE, ALL_FEATURES_ENABLED, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
@@ -106,7 +104,7 @@ const useWindowSize = () => {
 
 export default function App() {
   const [schools, setSchools] = useState<School[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fatalError, setFatalError] = useState<string | null>(null);
   
@@ -426,11 +424,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    (supabase.auth as any).getSession().then(({ data: { session } }: { data: { session: Session | null }}) => {
+    (supabase.auth as any).getSession().then(({ data: { session } }: { data: { session: any | null }}) => {
       setSession(session)
     });
 
-    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event: string, session: Session | null) => {
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((_event: string, session: any | null) => {
       setSession(session);
       if (_event === "SIGNED_OUT") {
           handleLogout();

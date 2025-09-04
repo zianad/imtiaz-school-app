@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useRef } from 'react';
 import { School, Page } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -73,24 +75,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                 </button>
             </div>
 
-            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-8 border-yellow-500 dark:border-yellow-400 rounded-lg shadow-md">
-                <div className="flex items-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500 dark:text-yellow-400 mr-4 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                    <div>
-                        <h3 className="font-bold text-yellow-800 dark:text-yellow-200">{t('supabaseSettingsChecklistTitle' as any)}</h3>
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">
-                            {t('supabaseSettingsInstructions' as any)}
-                        </p>
-                        <ul className="list-inside list-disc space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
-                            <li>{t('supabaseAllowSignups' as any)}</li>
-                            <li>{t('supabaseDisableEmailConfirm' as any)}</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
             <form onSubmit={handleAdd} className="mb-8 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addSchoolSectionTitle')}</h2>
                 <input
@@ -128,9 +112,22 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                     {t('addSchool')}
                 </button>
             </form>
+            
+            <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 rounded-r-lg">
+                {/* FIX: Add missing translation keys */}
+                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseEmailConfirmationNoteTitle' as any)}</h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseEmailConfirmationNoteBody' as any)}</p>
+                <div className="mt-3">
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-300">{t('supabaseSettingsChecklistTitle' as any)}</h4>
+                    <ul className="list-disc list-inside text-sm mt-1 text-gray-600 dark:text-gray-300">
+                        <li>{t('supabaseAllowSignups' as any)}</li>
+                        <li>{t('supabaseDisableEmailConfirm' as any)}</li>
+                    </ul>
+                </div>
+            </div>
 
             <div>
-                <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center border-t dark:border-gray-600 pt-4">{t('currentSchools')}</h2>
+                <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center border-t dark:border-gray-600 pt-4 mt-8">{t('currentSchools')}</h2>
                 <div className="max-h-64 overflow-y-auto space-y-2 p-2">
                     {schools.length > 0 ? (
                         schools.map(school => (
