@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
@@ -32,7 +31,7 @@ import MobileSuperAdminDashboard from './SuperAdminDashboard';
 import MobileSuperAdminSchoolManagement from './SuperAdminSchoolManagement';
 import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-// FIX: `Session` is a type, not a value, so it must be imported using `import type`.
+// FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. `Session` is a type and should be imported using `import type`.
 import type { Session } from '@supabase/supabase-js';
 import MobileConfigErrorScreen from './ConfigErrorScreen';
 
@@ -252,54 +251,32 @@ function AppContent() {
             return;
         }
 
-        // Step 2: Fetch related data, handling tables with and without direct school_id
-        const studentIdToSchoolIdMap = new Map<string, string>();
-        schoolsData.forEach(school => {
-            (school.students || []).forEach((student: any) => {
-                studentIdToSchoolIdMap.set(student.id, school.id);
-            });
-        });
-        const allStudentIds = Array.from(studentIdToSchoolIdMap.keys());
-
-        const tablesWithStudentId = [
-            'monthly_fee_payments', 'personalized_exercises', 'absences', 'complaints'
-        ];
-        
-        const tablesWithSchoolId = [
+        // Step 2: Fetch all other related data for all schools in parallel
+        const relatedTables = [
             'summaries', 'exercises', 'notes', 'exam_programs', 'notifications', 
-            'announcements', 'educational_tips', 'interview_requests', 
+            'announcements', 'educational_tips', 'monthly_fee_payments', 'interview_requests', 
             'supplementary_lessons', 'timetables', 'quizzes', 'projects', 'library_items', 
-            'album_photos', 'unified_assessments', 'talking_cards', 
-            'memorization_items', 'expenses'
+            'album_photos', 'personalized_exercises', 'unified_assessments', 'talking_cards', 
+            'memorization_items', 'absences', 'complaints', 'expenses'
         ];
 
-        const promises = [
-            ...tablesWithSchoolId.map(table => supabase.from(table).select('*').in('school_id', schoolIds)),
-            ...(allStudentIds.length > 0 
-                ? tablesWithStudentId.map(table => supabase.from(table).select('*').in('student_id', allStudentIds)) 
-                : [])
-        ];
-        
+        const promises = relatedTables.map(table => 
+            supabase.from(table).select('*').in('school_id', schoolIds)
+        );
         const results = await Promise.all(promises);
         
         const errors = results.map(r => r.error).filter(Boolean);
         if (errors.length > 0) console.warn("Errors fetching some related data:", errors);
 
         const relatedDataMap: { [key: string]: any[] } = {};
-        const allTables = [...tablesWithSchoolId, ...tablesWithStudentId];
         results.forEach((result, index) => {
-            if (allTables[index]) {
-                relatedDataMap[allTables[index]] = result.data || [];
-            }
+            relatedDataMap[relatedTables[index]] = result.data || [];
         });
 
         // Step 3: Map the fetched related data back to their respective schools
         for (const school of schoolsData) {
-            for (const tableName of tablesWithSchoolId) {
-                (school as any)[tableName] = relatedDataMap[tableName]?.filter(item => item.school_id === school.id) || [];
-            }
-             for (const tableName of tablesWithStudentId) {
-                (school as any)[tableName] = relatedDataMap[tableName]?.filter(item => studentIdToSchoolIdMap.get(item.student_id) === school.id) || [];
+            for (const tableName of relatedTables) {
+                (school as any)[tableName] = relatedDataMap[tableName].filter(item => item.school_id === school.id);
             }
         }
         
@@ -379,13 +356,16 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-    const isSuperAdmin = code === SUPER_ADMIN_CODE;
+    // Check if the user is the Super Admin based on the login code.
+    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_CODE.toLowerCase();
     
+    // Construct the email based on the user type.
     const email = isSuperAdmin
         ? SUPER_ADMIN_EMAIL
         : `${code}@school-app.com`;
     
-    // The code entered in the form is always the password.
+    // For all users, the code they enter in the form is their password.
+    // The Super Admin's password must be set to match SUPER_ADMIN_CODE in the Supabase dashboard.
     const password = code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
