@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from '../../../../packages/core/i18n';
 import { Language } from '../../../../packages/core/types';
@@ -41,7 +42,7 @@ const LanguageSwitcher: React.FC = () => {
             
             {isOpen && (
                 <div 
-                    className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border z-20 p-2 flex flex-col items-center space-y-2"
+                    className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border z-20 p-2 flex flex-col items-center space-y-2 dark:bg-gray-800 dark:border-gray-700"
                     role="menu"
                 >
                     {languages.map((lang) => (
