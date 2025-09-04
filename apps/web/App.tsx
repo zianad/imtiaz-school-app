@@ -9,9 +9,9 @@ import {
 } from '../../packages/core/types';
 
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, getBlankGrades, MOCK_SCHOOLS } from '../../packages/core/constants';
+import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, getBlankGrades, MOCK_SCHOOLS, STAGE_DETAILS, ALL_FEATURES_ENABLED, SUBJECT_MAP } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
-import { snakeToCamelCase } from '../../packages/core/utils';
+import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 
 // Import all screen components
 import UnifiedLoginScreen from './components/screens/UnifiedLoginScreen';
@@ -86,7 +86,6 @@ import SearchHeader from './components/common/SearchHeader';
 import SearchResultModal from './components/common/SearchResultModal';
 
 const App: React.FC = () => {
-    // FIX: Add state and logic to manage the entire application flow.
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [page, setPage] = useState<Page>(Page.UnifiedLogin);
     const [user, setUser] = useState<Student | Teacher | Principal | { name: string; id: string } | null>(null);
@@ -97,7 +96,6 @@ const App: React.FC = () => {
     const [sessionChecked, setSessionChecked] = useState(false);
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
-    // Navigation state
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
     const [selectedLevel, setSelectedLevel] = useState<string>('');
@@ -106,7 +104,6 @@ const App: React.FC = () => {
     const [isImpersonating, setIsImpersonating] = useState(false);
     const [principalBrowsingAs, setPrincipalBrowsingAs] = useState<{ level: string, subject: Subject, class: string } | null>(null);
 
-    // UI State
     const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
     const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
     const [confirmationModal, setConfirmationModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
@@ -114,7 +111,6 @@ const App: React.FC = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [selectedSearchResult, setSelectedSearchResult] = useState<SearchResult | null>(null);
-
 
     const { t } = useTranslation();
 
@@ -143,38 +139,171 @@ const App: React.FC = () => {
         }
     }, [isDarkMode]);
 
+    const findUserAndSchool = async (code: string) => {
+        let user_data: any = null, role: UserRole | null = null, school_id: string | null = null;
+
+        let { data: principalData } = await supabase.from('principals').select('*').eq('login_code', code).single();
+        if (principalData) {
+            user_data = principalData; role = UserRole.Principal; school_id = principalData.school_id;
+        } else {
+            let { data: teacherData } = await supabase.from('teachers').select('*').eq('login_code', code).single();
+            if (teacherData) {
+                user_data = teacherData; role = UserRole.Teacher; school_id = teacherData.school_id;
+            } else {
+                let { data: studentData } = await supabase.from('students').select('*').eq('guardian_code', code).single();
+                if (studentData) {
+                    user_data = studentData; role = UserRole.Guardian; school_id = studentData.school_id;
+                }
+            }
+        }
+        return { user_data, role, school_id };
+    };
+
+    const fetchUserData = async (userId: string, userEmail?: string) => {
+        setIsLoading(true);
+
+        if (userId === SUPER_ADMIN_LOGIN_CODE) {
+            const { data, error } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals(login_code)');
+            if (error) console.error("Error fetching schools:", error);
+            else setSchools(snakeToCamelCase(data) || []);
+            setUser({ id: SUPER_ADMIN_LOGIN_CODE, name: 'Super Admin' });
+            setUserRole(UserRole.SuperAdmin);
+            setPage(Page.SuperAdminDashboard);
+        } else {
+            const code = userEmail?.split('@')[0];
+            if (!code) { await handleLogout(); return; }
+
+            const { user_data, role, school_id } = await findUserAndSchool(code);
+
+            if (user_data && role && school_id) {
+                const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, students(*), teachers(*), principals(*)`).eq('id', school_id).single();
+                
+                if (schoolError) { console.error("Error fetching school data:", schoolError); await handleLogout(); return; }
+
+                const schoolObject = snakeToCamelCase(schoolData);
+                const arraysToInit: (keyof School)[] = ['summaries', 'exercises', 'notes', 'absences', 'examPrograms', 'notifications', 'announcements', 'complaints', 'educationalTips', 'monthlyFeePayments', 'interviewRequests', 'supplementaryLessons', 'timetables', 'quizzes', 'projects', 'libraryItems', 'albumPhotos', 'personalizedExercises', 'unifiedAssessments', 'talkingCards', 'memorizationItems', 'expenses', 'feedback'];
+                for (const key of arraysToInit) {
+                    if (!schoolObject[key]) schoolObject[key] = [];
+                }
+
+                setUser(snakeToCamelCase(user_data));
+                setUserRole(role);
+                setSchool(schoolObject);
+
+                if (!schoolObject.isActive) { setPage(Page.Maintenance); setIsLoading(false); return; }
+
+                switch (role) {
+                    case UserRole.Guardian: setPage(Page.GuardianDashboard); break;
+                    case UserRole.Teacher: setPage(Page.TeacherDashboard); break;
+                    case UserRole.Principal:
+                        const principal = snakeToCamelCase(user_data) as Principal;
+                        const accessibleStages = Object.values(schoolObject.principals).flat().filter((p: Principal) => p.loginCode === principal.loginCode).map((p: Principal) => p.stage);
+                        if (accessibleStages.length > 1) setPage(Page.PrincipalStageSelection);
+                        else { setSelectedStage(accessibleStages[0]); setPage(Page.PrincipalDashboard); }
+                        break;
+                }
+            } else {
+                await handleLogout();
+            }
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                await fetchUserData(session.user.id, session.user.email);
+            } else {
+                setIsLoading(false);
+            }
+            setSessionChecked(true);
+        };
+        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!session) {
+                setUser(null); setUserRole(null); setSchool(null); setSchools([]); setPage(Page.UnifiedLogin);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+
     const handleLogin = async (code: string) => {
-        // Implement login logic using Supabase
+        setIsLoading(true);
+        try {
+            if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
+                const { data: { session }, error } = await supabase.auth.signInWithPassword({ email: SUPER_ADMIN_EMAIL, password: SUPER_ADMIN_PASSWORD });
+                if (error) throw error;
+                if (session) await fetchUserData(session.user.id, session.user.email);
+            } else {
+                const { user_data, school_id } = await findUserAndSchool(code);
+                if (user_data && school_id) {
+                    const email = `${code}@${school_id}.com`;
+                    let { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password: code });
+                    if (error) {
+                        const { error: signUpError } = await supabase.auth.signUp({ email, password: code });
+                        if (signUpError && signUpError.message !== 'User already registered') throw signUpError;
+                        const { data: { session: newSession }, error: signInAgainError } = await supabase.auth.signInWithPassword({ email, password: code });
+                        if (signInAgainError) throw signInAgainError;
+                        session = newSession;
+                    }
+                    if (session) await fetchUserData(session.user.id, session.user.email);
+                } else {
+                    throw new Error("Invalid login credentials");
+                }
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleLogout = async () => {
-        // Implement logout logic
+        await supabase.auth.signOut();
     };
 
-    const navigateTo = (newPage: Page, state?: any) => {
-        setPage(newPage);
-        if (state?.student) setSelectedStudent(state.student);
-        if (state?.subject) setSelectedSubject(state.subject);
-        if (state?.level) setSelectedLevel(state.level);
-    };
+    const navigateTo = (newPage: Page) => setPage(newPage);
 
-    const onBack = () => {
-        // A simple back navigation logic
-        // This would be more robust with a proper routing library
-        window.history.back();
-    };
+    const onBack = useCallback(() => {
+      // Implement a more robust history/back logic
+      // For now, it will go to the main dashboard of the user
+      if (userRole === UserRole.SuperAdmin) setPage(Page.SuperAdminDashboard);
+      if (userRole === UserRole.Principal) setPage(Page.PrincipalDashboard);
+      if (userRole === UserRole.Teacher) setPage(Page.TeacherDashboard);
+      if (userRole === UserRole.Guardian) setPage(Page.GuardianDashboard);
+    }, [userRole]);
 
     const renderPage = () => {
-        // Render different components based on the current page
-        // This will be a large switch statement
-        // For brevity, a simplified version is shown here
-        switch (page) {
-            case Page.UnifiedLogin:
-                return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            // Add cases for all other pages...
-            default:
-                return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-        }
+      if (!sessionChecked || isLoading) {
+          return <div className="text-center">Loading...</div>;
+      }
+
+      switch(page) {
+        case Page.UnifiedLogin:
+            return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+        
+        case Page.GuardianDashboard:
+            return <GuardianDashboard student={user as Student} school={school!} onSelectSubject={(subject) => { setSelectedSubject(subject); navigateTo(Page.GuardianSubjectMenu); }} onLogout={handleLogout} navigateTo={navigateTo} notifications={school?.notifications || []} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+        
+        case Page.GuardianSubjectMenu:
+            return <GuardianSubjectMenu subject={selectedSubject!} school={school!} onSelectAction={navigateTo} onBack={() => navigateTo(Page.GuardianDashboard)} onLogout={handleLogout} studentLevel={ (user as Student).level } toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>;
+
+        case Page.GuardianViewSummaries:
+        case Page.GuardianViewExercises:
+            return <GuardianViewContent type={page === Page.GuardianViewSummaries ? 'summaries' : 'exercises'} school={school!} student={user as Student} subject={selectedSubject} onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>
+
+        case Page.GuardianViewNotes:
+            return <GuardianViewNotes student={user as Student} school={school!} subject={selectedSubject} onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+        
+        case Page.GuardianViewGrades:
+            return <GuardianViewGrades student={user as Student} subject={selectedSubject} school={school!} onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+        
+        // ... all other pages
+        default:
+          return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+      }
     };
 
     if (!isSupabaseConfigured && !MOCK_SCHOOLS) {
@@ -184,26 +313,7 @@ const App: React.FC = () => {
     return (
         <div className={`min-h-screen font-sans ${isDarkMode ? 'dark' : ''}`}>
             <div className="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center p-4">
-                {/* Render the current page */}
                 {renderPage()}
-
-                {/* Modals and Overlays */}
-                <FeedbackModal 
-                    isOpen={isFeedbackModalOpen} 
-                    onSubmit={() => {}} 
-                    onClose={() => setIsFeedbackModalOpen(false)} 
-                />
-                <ConfirmationModal 
-                    {...confirmationModal}
-                    onCancel={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
-                />
-                {selectedSearchResult && (
-                    <SearchResultModal 
-                        result={selectedSearchResult}
-                        onClose={() => setSelectedSearchResult(null)}
-                        isDarkMode={isDarkMode}
-                    />
-                )}
             </div>
         </div>
     );
