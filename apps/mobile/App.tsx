@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { LanguageProvider, useTranslation } from '../../packages/core/i18n';
-import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
+import { HELP_PHONE_NUMBER, getBlankGrades, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL } from '../../packages/core/constants';
 import { Student, Subject, Summary, Exercise, Note, Absence, Grade, EducationalStage, MemorizationItem, School, Teacher, UserRole, Principal } from '../../packages/core/types';
 import MobileGuardianDashboard from './GuardianDashboard';
 import MobileGuardianSubjectMenu, { MobileGuardianPage } from './GuardianSubjectMenu';
@@ -31,8 +32,8 @@ import MobileSuperAdminDashboard from './SuperAdminDashboard';
 import MobileSuperAdminSchoolManagement from './SuperAdminSchoolManagement';
 import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-// FIX: The `Session` type from '@supabase/supabase-js' was not being resolved correctly. Changed to a direct import to resolve the module resolution issue.
-import { Session } from '@supabase/supabase-js';
+// FIX: `Session` is a type, not a value, so it must be imported using `import type`.
+import type { Session } from '@supabase/supabase-js';
 import MobileConfigErrorScreen from './ConfigErrorScreen';
 
 
@@ -63,6 +64,16 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
     const [code, setCode] = useState('');
     const { t } = useTranslation();
     const [status, setStatus] = useState<'idle' | 'checking' | 'incorrect'>('idle');
+    const [rememberMe, setRememberMe] = useState(false);
+
+    useEffect(() => {
+        const savedCode = localStorage.getItem('savedMobileLoginCode');
+        const shouldRemember = localStorage.getItem('rememberMobileLoginCode') === 'true';
+        if (savedCode && shouldRemember) {
+            setCode(savedCode);
+            setRememberMe(true);
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,6 +83,13 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
         try {
             await onLogin(code.trim());
             // On success, the parent component will re-render and this component will be unmounted.
+             if (rememberMe) {
+                localStorage.setItem('savedMobileLoginCode', code.trim());
+                localStorage.setItem('rememberMobileLoginCode', 'true');
+            } else {
+                localStorage.removeItem('savedMobileLoginCode');
+                localStorage.removeItem('rememberMobileLoginCode');
+            }
         } catch(err) {
             setStatus('incorrect');
             setTimeout(() => setStatus('idle'), 800);
@@ -100,6 +118,16 @@ const MobileLoginScreen = ({ onLogin }: { onLogin: (code: string) => Promise<voi
                         letterSpacing: '0.1em'
                     }}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '16px' }}>
+                    <input
+                        id="remember-me-mobile"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        style={{ width: '1rem', height: '1rem' }}
+                    />
+                    <label htmlFor="remember-me-mobile" style={{ marginLeft: '8px', fontSize: '0.875rem', color: '#374151' }}>{t('rememberMe')}</label>
+                </div>
                 <button
                     type="submit"
                     style={{ 
@@ -198,6 +226,7 @@ function AppContent() {
     setSelectedStage(null);
     setPrincipalAction(null);
     setManagedSchool(null);
+    localStorage.removeItem('savedMobileLoginCode');
   }, []);
   
   const fetchUserData = useCallback(async () => {
@@ -223,45 +252,54 @@ function AppContent() {
             return;
         }
 
-        // Step 2: Fetch all other related data for all schools in parallel
-        const relatedTables = [
+        // Step 2: Fetch related data, handling tables with and without direct school_id
+        const studentIdToSchoolIdMap = new Map<string, string>();
+        schoolsData.forEach(school => {
+            (school.students || []).forEach((student: any) => {
+                studentIdToSchoolIdMap.set(student.id, school.id);
+            });
+        });
+        const allStudentIds = Array.from(studentIdToSchoolIdMap.keys());
+
+        const tablesWithStudentId = [
+            'monthly_fee_payments', 'personalized_exercises', 'absences', 'complaints'
+        ];
+        
+        const tablesWithSchoolId = [
             'summaries', 'exercises', 'notes', 'exam_programs', 'notifications', 
-            'announcements', 'educational_tips', 'monthly_fee_payments', 'interview_requests', 
+            'announcements', 'educational_tips', 'interview_requests', 
             'supplementary_lessons', 'timetables', 'quizzes', 'projects', 'library_items', 
-            'album_photos', 'personalized_exercises', 'unified_assessments', 'talking_cards', 
-            'memorization_items', 'absences', 'complaints', 'expenses'
+            'album_photos', 'unified_assessments', 'talking_cards', 
+            'memorization_items', 'expenses'
         ];
 
-        const promises = relatedTables.map(table => 
-            supabase.from(table).select('*').in('school_id', schoolIds)
-        );
+        const promises = [
+            ...tablesWithSchoolId.map(table => supabase.from(table).select('*').in('school_id', schoolIds)),
+            ...(allStudentIds.length > 0 
+                ? tablesWithStudentId.map(table => supabase.from(table).select('*').in('student_id', allStudentIds)) 
+                : [])
+        ];
         
-        // Use Promise.allSettled to make data fetching resilient to errors in individual tables.
-        const results = await Promise.allSettled(promises);
+        const results = await Promise.all(promises);
+        
+        const errors = results.map(r => r.error).filter(Boolean);
+        if (errors.length > 0) console.warn("Errors fetching some related data:", errors);
 
         const relatedDataMap: { [key: string]: any[] } = {};
-        
+        const allTables = [...tablesWithSchoolId, ...tablesWithStudentId];
         results.forEach((result, index) => {
-            const tableName = relatedTables[index];
-            if (result.status === 'fulfilled') {
-                if (result.value.error) {
-                    // Log Supabase-specific errors from fulfilled promises
-                    console.warn(`Error fetching data for table '${tableName}':`, result.value.error.message);
-                    relatedDataMap[tableName] = [];
-                } else {
-                    relatedDataMap[tableName] = result.value.data || [];
-                }
-            } else {
-                // Log network or other errors from rejected promises
-                console.error(`Failed to fetch data for table '${tableName}':`, result.reason);
-                relatedDataMap[tableName] = []; // Ensure the key exists even on failure
+            if (allTables[index]) {
+                relatedDataMap[allTables[index]] = result.data || [];
             }
         });
 
         // Step 3: Map the fetched related data back to their respective schools
         for (const school of schoolsData) {
-            for (const tableName of relatedTables) {
-                (school as any)[tableName] = relatedDataMap[tableName].filter(item => item.school_id === school.id);
+            for (const tableName of tablesWithSchoolId) {
+                (school as any)[tableName] = relatedDataMap[tableName]?.filter(item => item.school_id === school.id) || [];
+            }
+             for (const tableName of tablesWithStudentId) {
+                (school as any)[tableName] = relatedDataMap[tableName]?.filter(item => studentIdToSchoolIdMap.get(item.student_id) === school.id) || [];
             }
         }
         
@@ -341,13 +379,14 @@ function AppContent() {
   }, [session, handleLogout]);
 
    const handleLogin = useCallback(async (code: string) => {
-    // Check for super admin is case-insensitive to identify the user role.
-    const isSuperAdmin = code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase();
+    const isSuperAdmin = code === SUPER_ADMIN_CODE;
     
-    // Determine the email and password for the sign-in attempt.
-    const email = isSuperAdmin ? SUPER_ADMIN_EMAIL : `${code}@school-app.com`;
-    // For super admin, use the definitive password from constants. For all other users, their code is their password.
-    const password = isSuperAdmin ? SUPER_ADMIN_PASSWORD : code;
+    const email = isSuperAdmin
+        ? SUPER_ADMIN_EMAIL
+        : `${code}@school-app.com`;
+    
+    // The code entered in the form is always the password.
+    const password = code;
     
     const { data, error } = await (supabase.auth as any).signInWithPassword({ email, password });
 
@@ -390,10 +429,9 @@ function AppContent() {
                 if (error) alert(error.message); else await fetchUserData();
             }}
             onAddPrincipal={async (schoolId, stage, name, loginCode) => {
-                const trimmedLoginCode = loginCode.trim();
                 // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                await (supabase.auth as any).signUp({ email: `${trimmedLoginCode}@school-app.com`, password: trimmedLoginCode });
-                const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode: trimmedLoginCode, stage, schoolId }));
+                await (supabase.auth as any).signUp({ email: `${loginCode}@school-app.com`, password: loginCode });
+                const { error } = await supabase.from('principals').insert(camelToSnakeCase({ name, loginCode, stage, schoolId }));
                 if (error) alert(error.message); else await fetchUserData();
             }}
             onDeletePrincipal={async (schoolId, stage, principalId) => {
@@ -432,10 +470,9 @@ function AppContent() {
                     stage={selectedStage}
                     teachers={selectedSchool.teachers}
                     onAddTeacher={async (teacher) => {
-                         const teacherWithTrimmedCode = { ...teacher, loginCode: teacher.loginCode.trim() };
                          // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                         await (supabase.auth as any).signUp({ email: `${teacherWithTrimmedCode.loginCode}@school-app.com`, password: teacherWithTrimmedCode.loginCode });
-                         await supabase.from('teachers').insert(camelToSnakeCase({ ...teacherWithTrimmedCode, schoolId: selectedSchool.id }));
+                         await (supabase.auth as any).signUp({ email: `${teacher.loginCode}@school-app.com`, password: teacher.loginCode });
+                         await supabase.from('teachers').insert(camelToSnakeCase({ ...teacher, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
                     onUpdateTeacher={async (updatedTeacher) => {
@@ -453,10 +490,9 @@ function AppContent() {
                     stage={selectedStage}
                     students={selectedSchool.students.filter(s => s.stage === selectedStage)}
                     onAddStudent={async (student) => {
-                         const studentWithTrimmedCode = { ...student, guardianCode: student.guardianCode.trim() };
                          // FIX: The `signUp` method does not exist on `SupabaseAuthClient` type. Casting to `any` to bypass incorrect type definition.
-                         await (supabase.auth as any).signUp({ email: `${studentWithTrimmedCode.guardianCode}@school-app.com`, password: studentWithTrimmedCode.guardianCode });
-                         await supabase.from('students').insert(camelToSnakeCase({ ...studentWithTrimmedCode, schoolId: selectedSchool.id }));
+                         await (supabase.auth as any).signUp({ email: `${student.guardianCode}@school-app.com`, password: student.guardianCode });
+                         await supabase.from('students').insert(camelToSnakeCase({ ...student, schoolId: selectedSchool.id }));
                          await fetchUserData();
                     }}
                     onDeleteStudent={async (studentId) => {
