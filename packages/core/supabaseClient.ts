@@ -1,8 +1,5 @@
-
-
 import { createClient } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { MOCK_SCHOOLS, SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from './constants';
+import { MOCK_SCHOOLS, SUPER_ADMIN_CODE, SUPER_ADMIN_EMAIL } from './constants';
 import { UserRole, Student, Teacher, Principal, School } from "./types";
 import { snakeToCamelCase } from "./utils";
 
@@ -76,9 +73,9 @@ const mockSupabaseClient = {
             setTimeout(() => {
                 // Special case for Super Admin
                 if (email === SUPER_ADMIN_EMAIL) {
-                    // The password must match the definitive password for the super admin.
-                    if (password === SUPER_ADMIN_PASSWORD) {
-                        mockSession = { user: { id: SUPER_ADMIN_LOGIN_CODE, email: email }, expires_in: 3600 };
+                    // In the simplified logic, the code IS the password.
+                    if (password === SUPER_ADMIN_CODE) {
+                        mockSession = { user: { id: SUPER_ADMIN_CODE, email: email }, expires_in: 3600 };
                         authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
                         resolve({ data: { session: mockSession }, error: null });
                     } else {
@@ -227,6 +224,6 @@ if (!isSupabaseConfigured) {
   console.warn("WARNING: Supabase not configured. Running in offline mode with mock data.");
 }
 
-export const supabase: SupabaseClient = isSupabaseConfigured 
+export const supabase = isSupabaseConfigured 
   ? createClient(supabaseUrl!, supabaseAnonKey!)
   : mockSupabaseClient as any;
