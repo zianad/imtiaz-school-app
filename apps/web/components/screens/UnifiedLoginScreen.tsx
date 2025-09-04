@@ -40,6 +40,7 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
     const [status, setStatus] = useState<'idle' | 'checking' | 'correct' | 'incorrect'>('idle');
     const [error, setError] = useState('');
     const [inputType, setInputType] = useState<'password' | 'text'>('password');
+    const [rememberMe, setRememberMe] = useState(false);
     const visibilityTimeout = useRef<number | null>(null);
     const synthesisUnlocked = useRef(false);
 
@@ -53,6 +54,15 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
             synthesisUnlocked.current = true;
         }, 100);
     };
+
+    useEffect(() => {
+        const savedCode = localStorage.getItem('savedLoginCode');
+        const shouldRemember = localStorage.getItem('rememberLoginCode') === 'true';
+        if (savedCode && shouldRemember) {
+            setCode(savedCode);
+            setRememberMe(true);
+        }
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -91,6 +101,14 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
         try {
             await onLogin(code.trim());
             setStatus('correct');
+
+            if (rememberMe) {
+                localStorage.setItem('savedLoginCode', code.trim());
+                localStorage.setItem('rememberLoginCode', 'true');
+            } else {
+                localStorage.removeItem('savedLoginCode');
+                localStorage.removeItem('rememberLoginCode');
+            }
         } catch (err: any) {
             setStatus('incorrect');
              if (err.message.includes('Invalid login credentials')) {
@@ -132,10 +150,20 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                     aria-label={t('loginCodePlaceholder')}
                     disabled={status === 'checking' || status === 'correct'}
                 />
+                <div className="flex items-center justify-center">
+                    <input
+                        id="remember-me"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <label htmlFor="remember-me" className="ms-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('rememberMe')}</label>
+                </div>
                 <button
                     type="submit"
                     disabled={!code.trim() || status === 'checking' || status === 'correct'}
-                    className="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out shadow-lg text-lg transform hover:scale-105 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:transform-none !mt-6"
+                    className="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out shadow-lg text-lg transform hover:scale-105 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:transform-none dark:hover:bg-blue-500 !mt-6"
                 >
                     {status === 'checking' || status === 'correct' ? '...' : t('login')}
                 </button>

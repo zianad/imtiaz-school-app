@@ -1,68 +1,46 @@
-import React from 'react';
-import { Student, Subject, Grade, School } from '../../../../packages/core/types';
-import { useTranslation } from '../../../../packages/core/i18n';
+
+import React, { useState } from 'react';
+import { Student, Grade, Subject, School } from '../../../../packages/core/types';
 import { SUBJECT_MAP } from '../../../../packages/core/constants';
+import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface GuardianViewGradesProps {
-  school: School;
-  student: Student;
-  subject: Subject;
-  onBack: () => void;
-  onLogout: () => void;
-  toggleDarkMode: () => void;
-  isDarkMode: boolean;
+    student: Student;
+    subject: Subject;
+    school: School;
+    onBack: () => void;
+    onLogout: () => void;
+    toggleDarkMode: () => void;
+    isDarkMode: boolean;
 }
 
-const GuardianViewGrades: React.FC<GuardianViewGradesProps> = ({ school, student, subject, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
-    const { t, language } = useTranslation();
-    const isFrenchUI = language === 'fr';
-
-    const title = t('studentGrades');
-    const description = isFrenchUI ? "Le graphique montre la moyenne des notes pour chaque série de devoirs." : "يعرض المبيان متوسط النقط لكل سلسلة من الفروض.";
-    const scoreLabel = isFrenchUI ? "Moyenne" : "المعدل";
-    const noDataText = isFrenchUI ? "Pas de notes disponibles pour cette matière." : "لا توجد نقط مسجلة لهذه المادة بعد.";
-
-    const processGradesForChart = (gradesForSubject: Grade[] | undefined) => {
-        const assignments = [
-            { semester: 1, assignment: 1, name: isFrenchUI ? 'DS 1 (S1)' : 'ف 1 (س1)' },
-            { semester: 1, assignment: 2, name: isFrenchUI ? 'DS 2 (S1)' : 'ف 2 (س1)' },
-            { semester: 2, assignment: 1, name: isFrenchUI ? 'DS 1 (S2)' : 'ف 1 (س2)' },
-            { semester: 2, assignment: 2, name: isFrenchUI ? 'DS 2 (S2)' : 'ف 2 (س2)' },
-        ];
-
-        return assignments.map(point => {
-            const relevantGrades = gradesForSubject?.filter(g => 
-                g.semester === point.semester && g.assignment === point.assignment && g.score !== null
-            ) || [];
-
-            let average = null;
-            if (relevantGrades.length > 0) {
-                const sum = relevantGrades.reduce((acc, curr) => acc + (curr.score ?? 0), 0);
-                average = parseFloat((sum / relevantGrades.length).toFixed(2));
-            }
-            return { name: point.name, [scoreLabel]: average };
-        });
-    };
+const GuardianViewGrades: React.FC<GuardianViewGradesProps> = ({ student, subject, school, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
+    const { t } = useTranslation();
+    const [activeSemester, setActiveSemester] = useState<1 | 2>(1);
     
-    const gradesForSubject = student.grades[subject] || [];
-    const chartData = processGradesForChart(gradesForSubject);
-    const hasData = chartData.some(d => d[scoreLabel] !== null);
-
+    const grades = student.grades[subject] || [];
     const subSubjects = SUBJECT_MAP[subject] || [];
 
-    const getGradeFor = (subSubject: string, semester: 1 | 2, assignment: 1 | 2): number | null => {
-        return gradesForSubject.find(g => g.subSubject === subSubject && g.semester === semester && g.assignment === assignment)?.score ?? null;
-    }
+    const getGrade = (subSubject: string, semester: 1 | 2, assignment: 1 | 2): number | null => {
+        const grade = grades.find(g => g.subSubject === subSubject && g.semester === semester && g.assignment === assignment);
+        return grade ? grade.score : null;
+    };
+
+    const calculateAverage = (scores: (number | null)[]): string => {
+        const validScores = scores.filter(s => s !== null) as number[];
+        if (validScores.length === 0) return '-';
+        const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+        return average.toFixed(2);
+    };
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 animate-fade-in w-full relative">
             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
                 </div>
                 <div className="flex items-center gap-2">
@@ -70,53 +48,50 @@ const GuardianViewGrades: React.FC<GuardianViewGradesProps> = ({ school, student
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2 text-center">{title} - {subject}</h1>
-            <p className="text-center text-gray-500 dark:text-gray-400 mb-6">{description}</p>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">{t('studentGrades')}: {student.name}</h1>
+            <h2 className="text-xl font-semibold text-blue-700 dark:text-blue-400 text-center mb-6">{subject}</h2>
             
-            <div className="mb-6 bg-gray-50 dark:bg-gray-700/50 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                {hasData ? (
-                    <div className="w-full h-64">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#4A5568" : "#E2E8F0"} />
-                                <XAxis dataKey="name" stroke={isDarkMode ? "#A0AEC0" : "#4A5568"} fontSize={12} />
-                                <YAxis type="number" domain={[0, 10]} stroke={isDarkMode ? "#A0AEC0" : "#4A5568"} />
-                                <Tooltip contentStyle={{ backgroundColor: isDarkMode ? '#2D3748' : '#FFFFFF', border: '1px solid #4A5568' }} />
-                                <Legend />
-                                <Line connectNulls type="monotone" dataKey={scoreLabel} stroke="#3B82F6" strokeWidth={3} activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-center h-64">
-                        <p className="text-gray-500 dark:text-gray-400 text-lg">{noDataText}</p>
-                    </div>
-                )}
+            <div className="flex border-b-2 border-gray-200 dark:border-gray-700 mb-4">
+                <button
+                    onClick={() => setActiveSemester(1)}
+                    className={`flex-1 py-2 text-lg font-semibold transition-colors ${activeSemester === 1 ? 'border-b-4 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                    الأسدس الأول
+                </button>
+                <button
+                    onClick={() => setActiveSemester(2)}
+                    className={`flex-1 py-2 text-lg font-semibold transition-colors ${activeSemester === 2 ? 'border-b-4 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                >
+                    الأسدس الثاني
+                </button>
             </div>
-            
-            <div className="max-h-60 overflow-y-auto">
-                 <table className="w-full text-sm text-center">
-                    <thead className="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-100 dark:bg-gray-700">
+
+            <div className="max-h-[50vh] overflow-y-auto pr-2">
+                <table className="w-full text-center border-collapse">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
                         <tr>
-                            <th className="px-2 py-3">{t('subject')}</th>
-                            <th className="px-2 py-3">ف1 (س1)</th>
-                            <th className="px-2 py-3">ف2 (س1)</th>
-                            <th className="px-2 py-3">ف1 (س2)</th>
-                            <th className="px-2 py-3">ف2 (س2)</th>
+                            <th className="p-3 font-semibold text-sm text-gray-600 dark:text-gray-300">المكون</th>
+                            <th className="p-3 font-semibold text-sm text-gray-600 dark:text-gray-300">الفرض 1</th>
+                            <th className="p-3 font-semibold text-sm text-gray-600 dark:text-gray-300">الفرض 2</th>
+                            <th className="p-3 font-semibold text-sm text-blue-600 dark:text-blue-400">المعدل</th>
                         </tr>
                     </thead>
-                    <tbody className="text-gray-800 dark:text-gray-200">
-                        {subSubjects.map(sub => (
-                            <tr key={sub} className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-                                <td className="px-2 py-2 font-semibold">{sub}</td>
-                                <td>{getGradeFor(sub, 1, 1)}</td>
-                                <td>{getGradeFor(sub, 1, 2)}</td>
-                                <td>{getGradeFor(sub, 2, 1)}</td>
-                                <td>{getGradeFor(sub, 2, 2)}</td>
-                            </tr>
-                        ))}
+                    <tbody>
+                        {subSubjects.map(sub => {
+                            const score1 = getGrade(sub, activeSemester, 1);
+                            const score2 = getGrade(sub, activeSemester, 2);
+                            const avg = calculateAverage([score1, score2]);
+                            return (
+                                <tr key={sub} className="border-b border-gray-200 dark:border-gray-700">
+                                    <td className="p-3 font-medium text-gray-800 dark:text-gray-200">{sub}</td>
+                                    <td className={`p-3 font-bold ${(score1 ?? 0) < 5 ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>{score1 ?? '-'}</td>
+                                    <td className={`p-3 font-bold ${(score2 ?? 0) < 5 ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>{score2 ?? '-'}</td>
+                                    <td className={`p-3 font-bold ${parseFloat(avg) < 5 ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'}`}>{avg}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
-                 </table>
+                </table>
             </div>
 
             <div className="mt-8 flex items-center gap-4">

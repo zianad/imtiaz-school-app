@@ -1,6 +1,5 @@
 
 
-
 import React, { useState, useRef } from 'react';
 import { School, Page, SchoolFeature, EducationalStage, Principal } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -224,12 +223,6 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
             {/* Principal Management */}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-center mb-4">{t('managePrincipals')}</h2>
-                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-400 text-xs">
-                    <h4 className="font-bold text-yellow-800 dark:text-yellow-200">{t('supabaseEmailConfirmationNoteTitle')}</h4>
-                    <p className="text-yellow-700 dark:text-yellow-300">
-                        {t('supabaseEmailConfirmationNoteBody')}
-                    </p>
-                </div>
                 <div className="space-y-4 max-h-[40vh] overflow-y-auto p-2">
                     {allStages.map(stage => (
                         <div key={stage} className={`p-3 rounded-lg ${(school.stages || []).includes(stage) ? 'bg-gray-50 dark:bg-gray-700/50' : 'bg-gray-200 dark:bg-gray-700 opacity-50'}`}>

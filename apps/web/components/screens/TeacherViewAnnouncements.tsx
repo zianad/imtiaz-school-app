@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Announcement, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';

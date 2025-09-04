@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Announcement, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -20,7 +21,7 @@ const GuardianViewAnnouncements: React.FC<GuardianViewAnnouncementsProps> = ({ a
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
-            <div className="flex justify-between items-center mb-6">
+             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
                 </div>

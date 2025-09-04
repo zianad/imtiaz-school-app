@@ -1,5 +1,6 @@
-import React from 'react';
-import { School } from '../../../../packages/core/types';
+
+import React, { useMemo } from 'react';
+import { Summary, Exercise, School, Subject } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
@@ -7,28 +8,46 @@ import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface GuardianViewContentProps {
+    title: string;
+    items: (Summary | Exercise)[];
+    onBack: () => void;
     school: School;
+    onLogout: () => void;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
-    title: string;
-    items: { 
-        id: number;
-        title?: string; 
-        content: string;
-        image?: string; // base64
-        pdf?: { name: string; url: string }; // blob url
-        externalLink?: string;
-        date?: Date;
-    }[];
-    message?: string;
-    onBack: () => void;
-    onLogout: () => void;
 }
 
-const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ school, toggleDarkMode, isDarkMode, title, items, message, onBack, onLogout }) => {
+const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ title, items, onBack, school, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const isSummaryView = title === t('summaries');
+    const sortedItems = [...items].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
+    const isArabicContent = items.length > 0 && items[0]?.subject === Subject.Arabic;
+
+    const itemsByDomain = useMemo(() => {
+        if (!isArabicContent) return null;
+        const groups: Record<string, typeof items> = {};
+        for (const item of sortedItems) {
+            const domainKey = item.domain || t('miscellaneous');
+            if (!groups[domainKey]) {
+                groups[domainKey] = [];
+            }
+            groups[domainKey].push(item);
+        }
+        return groups;
+    }, [sortedItems, t, isArabicContent]);
+
+    const renderItem = (item: Summary | Exercise) => (
+        <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border-r-4 border-blue-400 dark:border-blue-500">
+            <div className="flex justify-between items-center">
+                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100">{'title' in item ? item.title : `${t('exercises')} - ${new Date(item.date!).toLocaleDateString()}`}</h2>
+                {!itemsByDomain && item.domain && (
+                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">{item.domain}</span>
+                )}
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mt-2 whitespace-pre-wrap">{item.content}</p>
+        </div>
+    );
+    
     return (
         <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 animate-fade-in w-full relative">
             <div className="flex justify-between items-center mb-6">
@@ -41,53 +60,33 @@ const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ school, toggl
                 </div>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{title}</h1>
-
+            
             <div className="w-full min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-gray-700/50 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                {items.length > 0 ? (
-                    <div className="space-y-4">
-                        {items.map((item) => (
-                            <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border-r-4 border-blue-400 dark:border-blue-500">
-                                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100">
-                                    {isSummaryView
-                                        ? item.title
-                                        : `تمرين بتاريخ: ${item.date ? new Date(item.date).toLocaleDateString('ar-DZ') : ''}`}
-                                </h2>
-                                {item.content && <p className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{item.content}</p>}
-                                {item.image && (
-                                    <img src={item.image} alt="ملحق" className="mt-3 rounded-lg max-w-full h-auto shadow-sm" />
-                                )}
-                                {item.pdf && (
-                                    <a
-                                        href={item.pdf.url}
-                                        download={item.pdf.name}
-                                        className="block text-center mt-3 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition"
-                                    >
-                                        تحميل PDF: {item.pdf.name}
-                                    </a>
-                                )}
-                                {item.externalLink && (
-                                     <a
-                                        href={item.externalLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block text-center mt-3 bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition"
-                                    >
-                                        🔗 رابط شرح إضافي
-                                    </a>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                {sortedItems.length > 0 ? (
+                     itemsByDomain ? (
+                        <div className="space-y-6">
+                            {Object.entries(itemsByDomain).map(([domain, domainItems]) => (
+                                <div key={domain}>
+                                    <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-3 border-b-2 pb-2">{domain}</h2>
+                                    <div className="space-y-4">
+                                        {domainItems.map(renderItem)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {sortedItems.map(renderItem)}
+                        </div>
+                    )
                 ) : (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-gray-500 dark:text-gray-400 text-lg">لا يوجد محتوى لعرضه حاليا.</p>
                     </div>
                 )}
             </div>
-
-            {message && <p className="text-center text-gray-600 dark:text-gray-300 mt-4 font-semibold">{message}</p>}
             
-            <div className="mt-8 flex items-center gap-4">
+             <div className="mt-8 flex items-center gap-4">
                 <BackButton onClick={onBack} />
                 <LogoutButton onClick={onLogout} />
             </div>
