@@ -109,7 +109,7 @@ export default function App() {
                 return;
             }
 
-            const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*)`).eq('id', schoolId).single();
+            const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*)`).eq('id', schoolId).single();
             if (schoolError) throw schoolError;
 
             const camelCaseSchool: any = snakeToCamelCase(schoolData);
@@ -295,27 +295,26 @@ export default function App() {
     // Guardian Flow
     case 'guardianDashboard': return <MobileGuardianDashboard student={currentStudent!} onLogout={handleLogout} onSelectSubject={(s) => { setSelectedSubject(s); setPage('guardianSubjectMenu'); }} onSelectMemorization={() => setPage('guardianViewMemorization')}/>;
     case 'guardianSubjectMenu': return <MobileGuardianSubjectMenu subject={selectedSubject!} onBack={() => setPage('guardianDashboard')} onSelectAction={(p) => setPage(`guardianView-${p}`)} />;
-    case 'guardianView-summaries': return <MobileGuardianViewContent title="Summaries" items={selectedSchool?.summaries.filter(i => i.subject === selectedSubject && i.level === currentStudent?.level) || []} onBack={() => setPage('guardianSubjectMenu')} />;
-    case 'guardianView-exercises': return <MobileGuardianViewContent title="Exercises" items={selectedSchool?.exercises.filter(i => i.subject === selectedSubject && i.level === currentStudent?.level) || []} onBack={() => setPage('guardianSubjectMenu')} />;
-    // Add more guardian views here...
-    case 'guardianViewMemorization': return <MobileGuardianViewMemorization school={selectedSchool!} toggleDarkMode={()=>{}} isDarkMode={false} items={selectedSchool?.memorizationItems.filter(i => i.level === currentStudent?.level) || []} onBack={() => setPage('guardianDashboard')} onLogout={handleLogout} />;
+    case 'guardianView-summaries': return <MobileGuardianViewContent title="Summaries" items={[]} onBack={() => setPage('guardianSubjectMenu')} />;
+    case 'guardianView-exercises': return <MobileGuardianViewContent title="Exercises" items={[]} onBack={() => setPage('guardianSubjectMenu')} />;
+    case 'guardianViewMemorization': return <MobileGuardianViewMemorization school={selectedSchool!} toggleDarkMode={()=>{}} isDarkMode={false} items={[]} onBack={() => setPage('guardianDashboard')} onLogout={handleLogout} />;
 
     // Teacher Flow
     case 'teacherDashboard': return <MobileTeacherDashboard teacher={currentTeacher!} onLogout={handleLogout} onSelectLevel={(l) => { setSelectedLevel(l); setPage('teacherClassSelection'); }} />;
     case 'teacherClassSelection': return <MobileTeacherClassSelection teacher={currentTeacher!} selectedLevel={selectedLevel} onBack={() => setPage('teacherDashboard')} onSelectClass={(c) => { setSelectedClass(c); setPage('teacherActionMenu'); }} />;
     case 'teacherActionMenu': return <MobileTeacherActionMenu onBack={() => setPage('teacherClassSelection')} onSelectAction={(a) => setPage(`teacher-${a}`)} />;
-    case 'teacher-manageSummaries': return <MobileTeacherManageSummaries items={selectedSchool?.summaries.filter(i=> i.level === selectedLevel && i.class === selectedClass && i.subject === currentTeacher?.subjects[0]) || []} onBack={() => setPage('teacherActionMenu')} onSave={(title, content) => handleSaveContent('summary', title, content)} onDelete={(id) => handleDeleteContent('summary', id)} />;
-    case 'teacher-manageExercises': return <MobileTeacherManageExercises items={selectedSchool?.exercises.filter(i=> i.level === selectedLevel && i.class === selectedClass && i.subject === currentTeacher?.subjects[0]) || []} onBack={() => setPage('teacherActionMenu')} onSave={(content) => handleSaveContent('exercise', '', content)} onDelete={(id) => handleDeleteContent('exercise', id)} />;
+    case 'teacher-manageSummaries': return <MobileTeacherManageSummaries items={[]} onBack={() => setPage('teacherActionMenu')} onSave={(title, content) => handleSaveContent('summary', title, content)} onDelete={(id) => handleDeleteContent('summary', id)} />;
+    case 'teacher-manageExercises': return <MobileTeacherManageExercises items={[]} onBack={() => setPage('teacherActionMenu')} onSave={(content) => handleSaveContent('exercise', '', content)} onDelete={(id) => handleDeleteContent('exercise', id)} />;
     case 'teacher-manageNotes': return <MobileTeacherManageNotes students={selectedSchool?.students.filter(s => s.level === selectedLevel && s.class === selectedClass) || []} onBack={() => setPage('teacherActionMenu')} onSaveNote={handleSaveNote} onMarkAbsent={handleMarkAbsent} />;
     case 'teacher-manageGrades': setPage('teacherStudentSelection'); return null; // Intermediate step
     case 'teacherStudentSelection': return <MobileTeacherStudentSelection students={selectedSchool?.students.filter(s => s.level === selectedLevel && s.class === selectedClass) || []} onBack={() => setPage('teacherActionMenu')} onSelectStudent={(s) => { setStudentForGrading(s); setPage('teacherStudentGrades'); }} />;
     case 'teacherStudentGrades': return <MobileTeacherStudentGrades student={studentForGrading!} subject={currentTeacher!.subjects[0]} initialGrades={studentForGrading?.grades[currentTeacher!.subjects[0]] || []} onBack={() => setPage('teacherStudentSelection')} onSave={handleSaveGrades} />;
-    case 'teacher-manageMemorization': return <MobileTeacherManageMemorization items={selectedSchool?.memorizationItems.filter(i => i.level === selectedLevel && i.class === selectedClass && i.subject === currentTeacher?.subjects[0]) || []} onBack={() => setPage('teacherActionMenu')} onSave={async (item) => { /* ... */ }} onDelete={async (id) => { /* ... */ }} onExtractText={async (img) => ''} />;
+    case 'teacher-manageMemorization': return <MobileTeacherManageMemorization items={[]} onBack={() => setPage('teacherActionMenu')} onSave={async (item) => { /* ... */ }} onDelete={async (id) => { /* ... */ }} onExtractText={async (img) => ''} />;
 
     // Principal Flow
     case 'principalStageSelection': return <MobilePrincipalStageSelection accessibleStages={principalStages} onLogout={handleLogout} onSelectStage={(s) => { setSelectedStage(s); setPage('principalDashboard'); }} />;
     case 'principalDashboard': return <MobilePrincipalDashboard onBack={() => setPage('principalStageSelection')} onSelectAction={(a) => setPage(`principal-${a}`)} />;
-    case 'principal-reviewNotes': return <MobilePrincipalReviewNotes notes={selectedSchool?.notes.filter(n => n.stage === selectedStage && n.status === 'pending') || []} students={selectedSchool?.students || []} onBack={() => setPage('principalDashboard')} onApprove={(id) => handlePrincipalNoteReview(id, true)} onReject={(id) => handlePrincipalNoteReview(id, false)} />;
+    case 'principal-reviewNotes': return <MobilePrincipalReviewNotes notes={[]} students={selectedSchool?.students || []} onBack={() => setPage('principalDashboard')} onApprove={(id) => handlePrincipalNoteReview(id, true)} onReject={(id) => handlePrincipalNoteReview(id, false)} />;
     case 'principal-manageTeachers': return <MobilePrincipalManageTeachers stage={selectedStage!} teachers={selectedSchool?.teachers || []} onBack={() => setPage('principalDashboard')} onAddTeacher={async (t) => { /* ... */ }} onUpdateTeacher={async (t) => { /* ... */ }} onDeleteTeacher={async (id) => { /* ... */ }} />;
     case 'principal-manageStudents': return <MobilePrincipalManageStudents stage={selectedStage!} students={selectedSchool?.students.filter(s => s.stage === selectedStage) || []} onBack={() => setPage('principalDashboard')} onAddStudent={async (s) => { /* ... */ }} onDeleteStudent={async (id) => { /* ... */ }} />;
 

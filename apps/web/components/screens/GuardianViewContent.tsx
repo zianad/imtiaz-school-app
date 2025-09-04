@@ -1,32 +1,60 @@
-
-import React, { useMemo } from 'react';
-import { Summary, Exercise, School, Subject } from '../../../../packages/core/types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Summary, Exercise, School, Subject, Student } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
+import { snakeToCamelCase } from '../../../../packages/core/utils';
 
 interface GuardianViewContentProps {
-    title: string;
-    items: (Summary | Exercise)[];
-    onBack: () => void;
+    type: 'summaries' | 'exercises';
     school: School;
+    student: Student;
+    subject: Subject | null;
+    onBack: () => void;
     onLogout: () => void;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
 }
 
-const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ title, items, onBack, school, onLogout, toggleDarkMode, isDarkMode }) => {
+const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ type, school, student, subject, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const sortedItems = [...items].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    const [items, setItems] = useState<(Summary | Exercise)[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const isArabicContent = items.length > 0 && items[0]?.subject === Subject.Arabic;
+    const title = type === 'summaries' ? t('summaries') : t('exercises');
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            if (!subject) return;
+            setIsLoading(true);
+            const { data, error } = await supabase
+                .from(type)
+                .select('*')
+                .eq('school_id', school.id)
+                .eq('subject', subject)
+                .eq('level', student.level)
+                .order('date', { ascending: false });
+
+            if (error) {
+                console.error(`Error fetching ${type}:`, error);
+            } else {
+                setItems(snakeToCamelCase(data));
+            }
+            setIsLoading(false);
+        };
+
+        fetchContent();
+    }, [type, school.id, student.level, subject]);
+
+    const isArabicContent = subject === Subject.Arabic;
 
     const itemsByDomain = useMemo(() => {
         if (!isArabicContent) return null;
         const groups: Record<string, typeof items> = {};
-        for (const item of sortedItems) {
+        for (const item of items) {
             const domainKey = item.domain || t('miscellaneous');
             if (!groups[domainKey]) {
                 groups[domainKey] = [];
@@ -34,7 +62,7 @@ const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ title, items,
             groups[domainKey].push(item);
         }
         return groups;
-    }, [sortedItems, t, isArabicContent]);
+    }, [items, t, isArabicContent]);
 
     const renderItem = (item: Summary | Exercise) => (
         <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border-r-4 border-blue-400 dark:border-blue-500">
@@ -62,7 +90,11 @@ const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ title, items,
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{title}</h1>
             
             <div className="w-full min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-gray-700/50 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                {sortedItems.length > 0 ? (
+                {isLoading ? (
+                     <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-500 dark:text-gray-400 text-lg">Loading...</p>
+                    </div>
+                ) : items.length > 0 ? (
                      itemsByDomain ? (
                         <div className="space-y-6">
                             {Object.entries(itemsByDomain).map(([domain, domainItems]) => (
@@ -76,7 +108,7 @@ const GuardianViewContent: React.FC<GuardianViewContentProps> = ({ title, items,
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {sortedItems.map(renderItem)}
+                            {items.map(renderItem)}
                         </div>
                     )
                 ) : (

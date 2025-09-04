@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 // @ts-ignore
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/genai';
@@ -175,7 +174,7 @@ const AppContent = () => {
         localStorage.removeItem('rememberLoginCode');
     }, []);
 
-    const fetchUserData = useCallback(async (forceReload = false) => {
+     const fetchUserData = useCallback(async (forceReload = false) => {
         setIsLoading(true);
         setFatalError(null);
         try {
@@ -183,10 +182,10 @@ const AppContent = () => {
             if (!email) { handleLogout(); return; }
 
             if (email === SUPER_ADMIN_EMAIL) {
-                const { data, error } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*), supplementary_lessons(*), unified_assessments(*), timetables(*), quizzes(*), projects(*), library_items(*), personalized_exercises(*), talking_cards(*))`);
+                const { data, error } = await supabase.from('schools').select(`id, name, logo_url, is_active, stages, principals(login_code, stage)`);
                 if (error) throw error;
                 const camelCaseSchools: any[] = snakeToCamelCase(data);
-                const transformedSchools = camelCaseSchools.map(school => {
+                 const transformedSchools = camelCaseSchools.map(school => {
                     const principalsByStage: School['principals'] = {};
                     (school.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
                         if (p.stage) {
@@ -194,9 +193,8 @@ const AppContent = () => {
                             principalsByStage[p.stage]!.push(p);
                         }
                     });
-                    return { ...school, principals: principalsByStage, featureFlags: school.featureFlags || {} };
+                    return { ...school, principals: principalsByStage };
                 });
-
                 setSchools(transformedSchools as School[]);
                 setUserRole(UserRole.SuperAdmin);
                 navigateTo(Page.SuperAdminDashboard);
@@ -214,7 +212,7 @@ const AppContent = () => {
                     return;
                 }
 
-                const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*), summaries(*), exercises(*), notes(*), absences(*), exam_programs(*), notifications(*), announcements(*), complaints(*), educational_tips(*), monthly_fee_payments(*), interview_requests(*), album_photos(*), memorization_items(*), feedback(*), expenses(*), supplementary_lessons(*), unified_assessments(*), timetables(*), quizzes(*), projects(*), library_items(*), personalized_exercises(*), talking_cards(*))`).eq('id', schoolId).single();
+                const { data: schoolData, error: schoolError } = await supabase.from('schools').select(`*, principals(*), students(*, grades(*)), teachers(*)`).eq('id', schoolId).single();
                 if (schoolError) throw schoolError;
 
                 const camelCaseSchool: any = snakeToCamelCase(schoolData);
@@ -244,7 +242,7 @@ const AppContent = () => {
                 
                 if (!transformedSchool.isActive) {
                     navigateTo(Page.Maintenance);
-                    return; // Stop further processing if school is inactive
+                    return;
                 }
 
                 if (studentData) {
@@ -319,7 +317,7 @@ const AppContent = () => {
     };
 
     const renderPage = () => {
-        if (!selectedSchool?.isActive && userRole !== UserRole.SuperAdmin) {
+        if (!selectedSchool?.isActive && userRole !== UserRole.SuperAdmin && page !== Page.UnifiedLogin) {
             return <MaintenanceScreen onLogout={handleLogout} />;
         }
         
@@ -328,12 +326,18 @@ const AppContent = () => {
             
             // Guardian Flow
             case Page.GuardianDashboard:
-                return <GuardianDashboard student={currentStudent!} school={selectedSchool!} onSelectSubject={(s) => { setSelectedSubject(s); navigateTo(Page.GuardianSubjectMenu); }} onLogout={handleLogout} navigateTo={navigateTo} notifications={selectedSchool?.notifications || []} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                return <GuardianDashboard student={currentStudent!} school={selectedSchool!} onSelectSubject={(s) => { setSelectedSubject(s); navigateTo(Page.GuardianSubjectMenu); }} onLogout={handleLogout} navigateTo={navigateTo} notifications={[]} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
             case Page.GuardianSubjectMenu:
                 return <GuardianSubjectMenu subject={selectedSubject!} school={selectedSchool!} studentLevel={currentStudent!.level} onSelectAction={navigateTo} onBack={() => navigateTo(Page.GuardianDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
             case Page.GuardianViewSummaries:
-                 return <GuardianViewContent title={t('summaries')} items={selectedSchool?.summaries.filter(i => i.subject === selectedSubject && i.level === currentStudent?.level) || []} onBack={() => navigateTo(Page.GuardianSubjectMenu)} school={selectedSchool!} onLogout={handleLogout} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
-            // Add other guardian pages...
+                 return <GuardianViewContent school={selectedSchool!} student={currentStudent!} subject={selectedSubject!} type="summaries" onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+            case Page.GuardianViewExercises:
+                return <GuardianViewContent school={selectedSchool!} student={currentStudent!} subject={selectedSubject!} type="exercises" onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+            case Page.GuardianViewNotes:
+                return <GuardianViewNotes school={selectedSchool!} student={currentStudent!} subject={selectedSubject!} onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+            case Page.GuardianViewGrades:
+                return <GuardianViewGrades student={currentStudent!} school={selectedSchool!} subject={selectedSubject!} onBack={() => navigateTo(Page.GuardianSubjectMenu)} onLogout={handleLogout} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+
             
             // Teacher Flow
             case Page.TeacherDashboard:
@@ -353,7 +357,7 @@ const AppContent = () => {
 
             // Super Admin Flow
             case Page.SuperAdminDashboard:
-                return <SuperAdminDashboard schools={schools} onAddSchool={handleAddSchool} onDeleteSchool={(id, name) => onConfirm(t('confirmDeleteSchool', { schoolName: name }), "", () => handleDeleteSchool(id))} onManageSchool={(id) => { const school = schools.find(s => s.id === id); if (school) { setSelectedSchool(school); navigateTo(Page.SuperAdminSchoolManagement); } }} onNavigate={navigateTo} onLogout={handleLogout} />;
+                return <SuperAdminDashboard schools={schools} onAddSchool={handleAddSchool} onDeleteSchool={(id, name) => onConfirm(t('confirmDeleteSchool', { schoolName: name }), "", () => handleDeleteSchool(id))} onManageSchool={handleManageSchool} onNavigate={navigateTo} onLogout={handleLogout} />;
             case Page.SuperAdminSchoolManagement:
                 return <SuperAdminSchoolManagement school={selectedSchool!} onToggleStatus={handleToggleSchoolStatus} onToggleStage={handleToggleSchoolStage} onToggleFeatureFlag={handleToggleFeatureFlag} onEnterFeaturePage={handleEnterPrincipalAsTeacher} onBack={() => { setSelectedSchool(null); navigateTo(Page.SuperAdminDashboard); }} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddPrincipal={handleAddPrincipal} onDeletePrincipal={(stage, id, name) => onConfirm(t('confirmDeletePrincipal', { name }), "", () => handleDeletePrincipal(stage, id))} onUpdatePrincipalCode={handleUpdatePrincipalCode} onUpdateSchoolDetails={handleUpdateSchoolDetails} />;
             // ...
@@ -364,6 +368,28 @@ const AppContent = () => {
     // Placeholder for functions that would be implemented, similar to mobile.
     const handleAddSchool = async () => {};
     const handleDeleteSchool = async (id: string) => {};
+    const handleManageSchool = async (id: string) => {
+        setIsLoading(true);
+        const { data, error } = await supabase.from('schools').select(`*, principals(*), students(*), teachers(*)`).eq('id', id).single();
+        if (error) {
+            console.error(error);
+            setIsLoading(false);
+            return;
+        }
+        const camelCaseSchool: any = snakeToCamelCase(data);
+        const principalsByStage: School['principals'] = {};
+        (camelCaseSchool.principals || []).forEach((p: Principal & { stage: EducationalStage }) => {
+            if (p.stage) {
+                if (!principalsByStage[p.stage]) principalsByStage[p.stage] = [];
+                principalsByStage[p.stage]!.push(p);
+            }
+        });
+        const transformedSchool = { ...camelCaseSchool, principals: principalsByStage, featureFlags: camelCaseSchool.featureFlags || {} };
+        setSelectedSchool(transformedSchool as School);
+        navigateTo(Page.SuperAdminSchoolManagement);
+        setIsLoading(false);
+    };
+
     const handleToggleSchoolStatus = async () => {};
     const handleToggleSchoolStage = async (stage: EducationalStage) => {};
     const handleToggleFeatureFlag = async (feature: SchoolFeature) => {};

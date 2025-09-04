@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Student, Grade, Subject, School } from '../../../../packages/core/types';
 import { SUBJECT_MAP } from '../../../../packages/core/constants';
@@ -10,7 +9,7 @@ import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface GuardianViewGradesProps {
     student: Student;
-    subject: Subject;
+    subject: Subject | null;
     school: School;
     onBack: () => void;
     onLogout: () => void;
@@ -22,6 +21,10 @@ const GuardianViewGrades: React.FC<GuardianViewGradesProps> = ({ student, subjec
     const { t } = useTranslation();
     const [activeSemester, setActiveSemester] = useState<1 | 2>(1);
     
+    if (!subject) {
+        return <div>Error: Subject not selected.</div>;
+    }
+
     const grades = student.grades[subject] || [];
     const subSubjects = SUBJECT_MAP[subject] || [];
 

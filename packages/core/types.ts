@@ -4,6 +4,8 @@ export type Language = 'ar' | 'fr' | 'en';
 
 export enum Page {
   UnifiedLogin,
+  // FIX: Add Maintenance page for inactive schools.
+  Maintenance,
 
   // Super Admin
   SuperAdminDashboard,
