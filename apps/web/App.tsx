@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -373,10 +372,23 @@ const App: React.FC = () => {
     if (!school) return;
     try {
         setIsLoading(true);
-         const { data: existing, error: checkError } = await supabase.from('principals').select('id').eq('login_code', loginCode).limit(1);
-        if (checkError) throw checkError;
-        if (existing && existing.length > 0) {
-            throw new Error(t('principalCodeExists' as any));
+        // Comprehensive check for code uniqueness within the school
+        const tables = [
+            { name: 'principals', codeCol: 'login_code' },
+            { name: 'teachers', codeCol: 'login_code' },
+            { name: 'students', codeCol: 'guardian_code' }
+        ];
+        for (const table of tables) {
+            const { data: existing, error: checkError } = await supabase
+                .from(table.name)
+                .select('id')
+                .eq('school_id', school.id)
+                .eq(table.codeCol, loginCode)
+                .limit(1);
+            if (checkError) throw checkError;
+            if (existing && existing.length > 0) {
+                throw new Error(t('principalCodeExists'));
+            }
         }
 
         const { error } = await supabase.from('principals').insert({
@@ -394,7 +406,11 @@ const App: React.FC = () => {
         if(allSchoolsError) throw allSchoolsError;
         setSchools(snakeToCamelCase(allSchools));
     } catch (error: any) {
-        alert(`${t('failedToAddPrincipal' as any)}: ${error.message}`);
+        if (error.message && (error.message.includes('duplicate key value') || error.message === t('principalCodeExists'))) {
+            alert(t('principalCodeExists'));
+        } else {
+            alert(`${t('failedToAddPrincipal')}: ${error.message}`);
+        }
     } finally {
         setIsLoading(false);
     }
@@ -429,10 +445,23 @@ const App: React.FC = () => {
       if (!school) return;
       try {
           setIsLoading(true);
-           const { data: existing, error: checkError } = await supabase.from('principals').select('id').eq('login_code', newCode).neq('id', principalId).limit(1);
-          if (checkError) throw checkError;
-          if (existing && existing.length > 0) {
-              throw new Error(t('principalCodeExists' as any));
+          const tables = [
+            { name: 'principals', codeCol: 'login_code' },
+            { name: 'teachers', codeCol: 'login_code' },
+            { name: 'students', codeCol: 'guardian_code' }
+          ];
+
+          for (const table of tables) {
+              let query = supabase.from(table.name).select('id').eq('school_id', school.id).eq(table.codeCol, newCode);
+              if (table.name === 'principals') {
+                  query = query.neq('id', principalId);
+              }
+              const { data: existing, error: checkError } = await query.limit(1);
+
+              if (checkError) throw checkError;
+              if (existing && existing.length > 0) {
+                  throw new Error(t('principalCodeExists'));
+              }
           }
 
           const { error: updateError } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
@@ -445,7 +474,11 @@ const App: React.FC = () => {
           if(allSchoolsError) throw allSchoolsError;
           setSchools(snakeToCamelCase(allSchools));
       } catch (error: any) {
-          alert(`${t('failedToUpdateCode' as any)}: ${error.message}`);
+          if (error.message && (error.message.includes('duplicate key value') || error.message === t('principalCodeExists'))) {
+            alert(t('principalCodeExists'));
+          } else {
+            alert(`${t('failedToUpdateCode')}: ${error.message}`);
+          }
       } finally {
           setIsLoading(false);
       }
