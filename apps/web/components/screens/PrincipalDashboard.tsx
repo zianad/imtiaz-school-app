@@ -62,9 +62,11 @@ const PrincipalDashboard: React.FC<PrincipalDashboardProps> = ({ school, stage, 
 
     const enabledActions = allActions.filter(action => school.featureFlags[action.feature] !== false);
 
-    const studentCount = school.students.filter(s => s.stage === stage).length;
-    const teacherCount = school.teachers.length;
-    const pendingNotesCount = school.notes.filter(n => n.status === 'pending' && n.stage === stage).length;
+    // FIX: Add defensive checks to prevent crash if school.students or school.notes are null/undefined.
+    const studentCount = (school.students || []).filter(s => s.stage === stage).length;
+    const teacherCount = (school.teachers || []).length;
+    const pendingNotesCount = (school.notes || []).filter(n => n.status === 'pending' && n.stage === stage).length;
+
 
     const renderDesktopLayout = () => {
         return (
