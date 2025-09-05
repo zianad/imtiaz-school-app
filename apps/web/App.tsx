@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
@@ -115,6 +114,37 @@ const App: React.FC = () => {
 
   const { t } = useTranslation();
 
+  const processSchoolData = useCallback((schoolData: any): any => {
+    if (!schoolData) return null;
+    if (Array.isArray(schoolData)) {
+        return schoolData.map(s => processSchoolData(s));
+    }
+
+    const camelSchool = snakeToCamelCase(schoolData);
+    if (camelSchool.principals && Array.isArray(camelSchool.principals)) {
+        camelSchool.principals = camelSchool.principals.reduce((acc: { [key in EducationalStage]?: Principal[] }, principal: Principal) => {
+            const stage = principal.stage;
+            if (!acc[stage]) {
+                acc[stage] = [];
+            }
+            acc[stage]!.push(principal);
+            return acc;
+        }, {});
+    }
+    return camelSchool;
+  }, []);
+
+  const refreshSchoolState = useCallback(async (schoolId: string) => {
+    const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals(*)').eq('id', schoolId).single();
+    if (refreshError) throw refreshError;
+    setSchool(processSchoolData(refreshedSchool));
+
+    const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+    if (allSchoolsError) throw allSchoolsError;
+    setSchools(processSchoolData(allSchools));
+  }, [processSchoolData]);
+
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -218,7 +248,7 @@ const App: React.FC = () => {
         setPage(Page.SuperAdminDashboard);
         const { data, error: schoolError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
         if(schoolError) throw schoolError;
-        setSchools(snakeToCamelCase(data));
+        setSchools(processSchoolData(data));
     } else {
         // Search for user across all roles
         let userMatch: { user: any, role: UserRole, schoolId: string } | null = null;
@@ -264,8 +294,8 @@ const App: React.FC = () => {
                 .eq('id', userMatch.schoolId)
                 .single();
             if (schoolError) throw schoolError;
-
-            const fullSchoolData = snakeToCamelCase(schoolData);
+            
+            const fullSchoolData = processSchoolData(schoolData);
 
             if(!fullSchoolData.isActive) {
                 await supabase.auth.signOut();
@@ -287,7 +317,7 @@ const App: React.FC = () => {
             throw new Error(t('invalidCode'));
         }
     }
-  }, [t]);
+  }, [t, processSchoolData]);
   
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
@@ -339,7 +369,7 @@ const App: React.FC = () => {
 
       const { data, error: refreshError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
       if (refreshError) throw refreshError;
-      setSchools(snakeToCamelCase(data));
+      setSchools(processSchoolData(data));
 
     } catch (error: any) {
       console.error("Error adding school:", error);
@@ -398,13 +428,9 @@ const App: React.FC = () => {
             login_code: loginCode
         });
         if (error) throw error;
-        const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
-        if (refreshError) throw refreshError;
-        const camelSchool = snakeToCamelCase(refreshedSchool);
-        setSchool(camelSchool);
-        const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
-        if(allSchoolsError) throw allSchoolsError;
-        setSchools(snakeToCamelCase(allSchools));
+        
+        await refreshSchoolState(school.id);
+
     } catch (error: any) {
         if (error.message && (error.message.includes('duplicate key value') || error.message === t('principalCodeExists'))) {
             alert(t('principalCodeExists'));
@@ -425,13 +451,7 @@ const App: React.FC = () => {
                 setIsLoading(true);
                 const { error } = await supabase.from('principals').delete().match({ id: principalId });
                 if (error) throw error;
-                const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
-                if (refreshError) throw refreshError;
-                const camelSchool = snakeToCamelCase(refreshedSchool);
-                setSchool(camelSchool);
-                const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
-                if(allSchoolsError) throw allSchoolsError;
-                setSchools(snakeToCamelCase(allSchools));
+                await refreshSchoolState(school.id);
             } catch (error: any) {
                 alert(`${t('failedToDeletePrincipal' as any)}: ${error.message}`);
             } finally {
@@ -466,13 +486,7 @@ const App: React.FC = () => {
 
           const { error: updateError } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
           if (updateError) throw updateError;
-          const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
-          if (refreshError) throw refreshError;
-          const camelSchool = snakeToCamelCase(refreshedSchool);
-          setSchool(camelSchool);
-          const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
-          if(allSchoolsError) throw allSchoolsError;
-          setSchools(snakeToCamelCase(allSchools));
+          await refreshSchoolState(school.id);
       } catch (error: any) {
           if (error.message && (error.message.includes('duplicate key value') || error.message === t('principalCodeExists'))) {
             alert(t('principalCodeExists'));
@@ -493,19 +507,12 @@ const App: React.FC = () => {
             ? currentStages.filter(s => s !== stage)
             : [...currentStages, stage];
 
-        const { data: updatedSchoolData, error } = await supabase
+        const { error } = await supabase
             .from('schools')
             .update({ stages: newStages })
-            .eq('id', school.id)
-            .select('*, principals:principals(*)')
-            .single();
-
+            .eq('id', school.id);
         if (error) throw error;
-        
-        const camelSchool = snakeToCamelCase(updatedSchoolData);
-        setSchool(camelSchool);
-        setSchools(prevSchools => prevSchools.map(s => s.id === school.id ? camelSchool : s));
-
+        await refreshSchoolState(school.id);
     } catch (error: any) {
         alert(`Failed to update stages: ${error.message}`);
     } finally {
@@ -518,16 +525,12 @@ const App: React.FC = () => {
     try {
         setIsLoading(true);
         const newStatus = !school.isActive;
-        const { data: updatedSchoolData, error } = await supabase
+        const { error } = await supabase
             .from('schools')
             .update({ is_active: newStatus })
-            .eq('id', school.id)
-            .select('*, principals:principals(*)')
-            .single();
+            .eq('id', school.id);
         if (error) throw error;
-        const camelSchool = snakeToCamelCase(updatedSchoolData);
-        setSchool(camelSchool);
-        setSchools(prev => prev.map(s => s.id === school.id ? camelSchool : s));
+        await refreshSchoolState(school.id);
     } catch (error: any) {
         alert(`Failed to update school status: ${error.message}`);
     } finally {
@@ -542,16 +545,12 @@ const App: React.FC = () => {
         const currentFlags = school.featureFlags || {};
         const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
         
-        const { data: updatedSchoolData, error } = await supabase
+        const { error } = await supabase
             .from('schools')
             .update({ feature_flags: newFlags })
-            .eq('id', school.id)
-            .select('*, principals:principals(*)')
-            .single();
+            .eq('id', school.id);
         if (error) throw error;
-        const camelSchool = snakeToCamelCase(updatedSchoolData);
-        setSchool(camelSchool);
-        setSchools(prev => prev.map(s => s.id === school.id ? camelSchool : s));
+        await refreshSchoolState(school.id);
     } catch (error: any) {
         alert(`Failed to update feature flag: ${error.message}`);
     } finally {
@@ -562,16 +561,12 @@ const App: React.FC = () => {
   const handleUpdateSchoolDetails = async (schoolId: string, name: string, logoUrl: string) => {
     try {
         setIsLoading(true);
-        const { data: updatedSchoolData, error } = await supabase
+        const { error } = await supabase
             .from('schools')
             .update({ name: name, logo_url: logoUrl })
-            .eq('id', schoolId)
-            .select('*, principals:principals(*)')
-            .single();
+            .eq('id', schoolId);
         if (error) throw error;
-        const camelSchool = snakeToCamelCase(updatedSchoolData);
-        setSchool(camelSchool);
-        setSchools(prev => prev.map(s => s.id === schoolId ? camelSchool : s));
+        await refreshSchoolState(schoolId);
     } catch (error: any) {
         alert(`Failed to update school details: ${error.message}`);
     } finally {
@@ -609,11 +604,30 @@ const App: React.FC = () => {
                 onEnterFeaturePage={(p, s) => { setSelectedStage(s); setPage(p); setIsImpersonating(true); }} 
                 onUpdateSchoolDetails={handleUpdateSchoolDetails} 
             />;
-        case Page.PrincipalStageSelection:
+        case Page.PrincipalStageSelection: {
             if (!school || !currentUser) return null;
             const principal = currentUser as Principal;
-            const accessibleStages = school.principals ? Object.entries(school.principals).filter(([_, v]) => v?.some(p => p.id === principal.id)).map(([k]) => k as EducationalStage) : [];
-            return <PrincipalStageSelection school={school} accessibleStages={accessibleStages} onSelectStage={(s) => {setSelectedStage(s); setPage(Page.PrincipalDashboard)}} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={handleBack}/>
+
+            // FIX: Robustly determine accessible stages to prevent crash from inconsistent data structure.
+            let accessibleStages: EducationalStage[] = [];
+            if (school.principals) {
+                if (Array.isArray(school.principals)) {
+                    // Handle case where principals is an unprocessed array from DB
+                    accessibleStages = school.principals
+                        .filter(p => p.id === principal.id)
+                        .map(p => p.stage);
+                } else if (typeof school.principals === 'object') {
+                    // Handle case where principals is the expected object grouped by stage
+                    accessibleStages = Object.entries(school.principals)
+                        .filter(([_, principalList]) => 
+                            Array.isArray(principalList) && principalList.some(p => p.id === principal.id)
+                        )
+                        .map(([stageKey]) => stageKey as EducationalStage);
+                }
+            }
+
+            return <PrincipalStageSelection school={school} accessibleStages={[...new Set(accessibleStages)]} onSelectStage={(s) => {setSelectedStage(s); setPage(Page.PrincipalDashboard)}} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={handleBack}/>
+        }
         case Page.PrincipalDashboard:
             if (!school || !selectedStage) return null;
             return <PrincipalDashboard school={school} stage={selectedStage} onSelectAction={(p) => navigateTo(p)} onLogout={handleLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
