@@ -341,9 +341,6 @@ const App: React.FC = () => {
     }
     try {
       setIsLoading(true);
-      const { data: { session: superAdminSession } } = await supabase.auth.getSession();
-      if (!superAdminSession) throw new Error("Super admin not logged in.");
-
       const { data: schoolData, error: schoolError } = await supabase
         .from('schools')
         .insert({
@@ -361,30 +358,7 @@ const App: React.FC = () => {
 
       const newSchoolId = schoolData.id;
       const lowerPrincipalCode = principalCode.trim().toLowerCase();
-      const email = `${lowerPrincipalCode}@${newSchoolId}.com`;
-      const password = `ImtiazApp_${lowerPrincipalCode}_S3cure!`;
-
-      // Create auth user, temporarily logging out super admin
-      const { error: signUpError } = await supabase.auth.signUp({ email, password });
       
-      // Immediately restore super admin session
-      const { error: restoreError } = await supabase.auth.setSession({
-        access_token: superAdminSession.access_token,
-        refresh_token: superAdminSession.refresh_token,
-      });
-
-      if (restoreError) {
-        await supabase.from('schools').delete().match({ id: newSchoolId });
-        alert("Authentication error. Please log in again.");
-        window.location.reload();
-        return;
-      }
-      
-      if (signUpError) {
-        await supabase.from('schools').delete().match({ id: newSchoolId });
-        throw signUpError;
-      }
-
       const { error: principalError } = await supabase
         .from('principals')
         .insert({
@@ -395,8 +369,8 @@ const App: React.FC = () => {
         });
       
       if (principalError) {
+        // Rollback school creation if principal creation fails
         await supabase.from('schools').delete().match({ id: newSchoolId });
-        // Note: Can't easily delete the auth user from client-side
         throw principalError;
       }
 
@@ -452,29 +426,6 @@ const App: React.FC = () => {
             if (existing && existing.length > 0) {
                 throw new Error(t('principalCodeExists'));
             }
-        }
-
-        const { data: { session: superAdminSession } } = await supabase.auth.getSession();
-        if (!superAdminSession) throw new Error("Super admin not logged in.");
-
-        const email = `${lowerLoginCode}@${school.id}.com`;
-        const password = `ImtiazApp_${lowerLoginCode}_S3cure!`;
-
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
-        
-        const { error: restoreError } = await supabase.auth.setSession({
-            access_token: superAdminSession.access_token,
-            refresh_token: superAdminSession.refresh_token,
-        });
-
-        if (restoreError) {
-            alert("Authentication error while adding principal. Please log in again.");
-            window.location.reload();
-            return;
-        }
-
-        if (signUpError && !signUpError.message.includes('User already registered')) {
-            throw signUpError;
         }
 
         const { error } = await supabase.from('principals').insert({
