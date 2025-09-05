@@ -269,10 +269,10 @@ const App: React.FC = () => {
         
         if (userMatch) {
             const email = `${code}@${userMatch.schoolId}.com`;
-            // FIX: Supabase auth has a minimum password length requirement (default is 6).
-            // A short login code would fail during the automatic sign-up process.
-            // We pad the code to ensure the derived password meets the requirement.
-            const password = code.padEnd(8, '_');
+            // FIX: The previous padding method was insufficient for Supabase's password complexity rules
+            // when using simple numeric codes. Appending a fixed, complex string ensures the password
+            // meets both length and complexity requirements, ensuring successful user sign-up on first login.
+            const password = `${code}_ImtiazApp!`;
             
             const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
