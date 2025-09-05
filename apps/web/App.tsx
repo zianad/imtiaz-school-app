@@ -269,9 +269,6 @@ const App: React.FC = () => {
         
         if (userMatch) {
             const email = `${code}@${userMatch.schoolId}.com`;
-            // FIX: Updated the password generation logic again for increased complexity to satisfy
-            // stricter cloud authentication policies. This ensures that even simple numeric login codes
-            // result in a strong password, preventing sign-up failures on the first login attempt.
             const password = `ImtiazApp_${code}_S3cure!`;
             
             const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
@@ -282,9 +279,6 @@ const App: React.FC = () => {
                     throw signUpError;
                 }
                 const { error: retrySignInError } = await supabase.auth.signInWithPassword({ email, password });
-                // FIX: Add specific error handling for the "Email not confirmed" case. This provides
-                // the user with a clear, actionable message about the necessary Supabase configuration
-                // change, directly addressing the most likely root cause of login failures for new users.
                 if (retrySignInError) {
                     if (retrySignInError.message.includes('Email not confirmed')) {
                         throw new Error('SUPABASE_EMAIL_CONFIRMATION_ERROR');
@@ -292,6 +286,9 @@ const App: React.FC = () => {
                     throw retrySignInError;
                 }
             } else if (signInError) {
+                if (signInError.message.includes('Email not confirmed')) {
+                    throw new Error('SUPABASE_EMAIL_CONFIRMATION_ERROR');
+                }
                 throw signInError;
             }
 
@@ -344,6 +341,9 @@ const App: React.FC = () => {
     }
     try {
       setIsLoading(true);
+      const { data: { session: superAdminSession } } = await supabase.auth.getSession();
+      if (!superAdminSession) throw new Error("Super admin not logged in.");
+
       const { data: schoolData, error: schoolError } = await supabase
         .from('schools')
         .insert({
@@ -360,18 +360,43 @@ const App: React.FC = () => {
       if (!schoolData) throw new Error("School creation failed.");
 
       const newSchoolId = schoolData.id;
+      const lowerPrincipalCode = principalCode.trim().toLowerCase();
+      const email = `${lowerPrincipalCode}@${newSchoolId}.com`;
+      const password = `ImtiazApp_${lowerPrincipalCode}_S3cure!`;
+
+      // Create auth user, temporarily logging out super admin
+      const { error: signUpError } = await supabase.auth.signUp({ email, password });
+      
+      // Immediately restore super admin session
+      const { error: restoreError } = await supabase.auth.setSession({
+        access_token: superAdminSession.access_token,
+        refresh_token: superAdminSession.refresh_token,
+      });
+
+      if (restoreError) {
+        await supabase.from('schools').delete().match({ id: newSchoolId });
+        alert("Authentication error. Please log in again.");
+        window.location.reload();
+        return;
+      }
+      
+      if (signUpError) {
+        await supabase.from('schools').delete().match({ id: newSchoolId });
+        throw signUpError;
+      }
 
       const { error: principalError } = await supabase
         .from('principals')
         .insert({
           name: `${t('principal')} ${t('primaryStage')}`,
-          login_code: principalCode.trim().toLowerCase(),
+          login_code: lowerPrincipalCode,
           stage: EducationalStage.PRIMARY,
           school_id: newSchoolId,
         });
       
       if (principalError) {
         await supabase.from('schools').delete().match({ id: newSchoolId });
+        // Note: Can't easily delete the auth user from client-side
         throw principalError;
       }
 
@@ -411,7 +436,6 @@ const App: React.FC = () => {
     try {
         setIsLoading(true);
         const lowerLoginCode = loginCode.trim().toLowerCase();
-        // Comprehensive check for code uniqueness within the school
         const tables = [
             { name: 'principals', codeCol: 'login_code' },
             { name: 'teachers', codeCol: 'login_code' },
@@ -428,6 +452,29 @@ const App: React.FC = () => {
             if (existing && existing.length > 0) {
                 throw new Error(t('principalCodeExists'));
             }
+        }
+
+        const { data: { session: superAdminSession } } = await supabase.auth.getSession();
+        if (!superAdminSession) throw new Error("Super admin not logged in.");
+
+        const email = `${lowerLoginCode}@${school.id}.com`;
+        const password = `ImtiazApp_${lowerLoginCode}_S3cure!`;
+
+        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        
+        const { error: restoreError } = await supabase.auth.setSession({
+            access_token: superAdminSession.access_token,
+            refresh_token: superAdminSession.refresh_token,
+        });
+
+        if (restoreError) {
+            alert("Authentication error while adding principal. Please log in again.");
+            window.location.reload();
+            return;
+        }
+
+        if (signUpError && !signUpError.message.includes('User already registered')) {
+            throw signUpError;
         }
 
         const { error } = await supabase.from('principals').insert({
@@ -650,7 +697,6 @@ const App: React.FC = () => {
         case Page.TeacherActionMenu:
               if (!school || !currentUser || !selectedLevel || !selectedSubject) return null;
               return <TeacherActionMenu school={school} selectedLevel={selectedLevel} onSelectAction={(p) => setPage(p)} onBack={() => setPage(Page.TeacherDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>
-        // FIX: Replaced non-existent Page.GuardianViewContent with correct pages for summaries and exercises.
         case Page.GuardianViewSummaries:
             if (!school || !currentUser || !selectedSubject) return null;
             return <GuardianViewContent school={school} student={currentUser as Student} subject={selectedSubject} type="summaries" onBack={() => setPage(Page.GuardianSubjectMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>;
