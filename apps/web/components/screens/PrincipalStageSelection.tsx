@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { School, EducationalStage } from '../../../../packages/core/types';
 import LogoutButton from '../common/LogoutButton';
@@ -26,8 +25,10 @@ const STAGE_COLORS: { [key in EducationalStage]: string } = {
 const PrincipalStageSelection: React.FC<PrincipalStageSelectionProps> = ({ school, accessibleStages, onSelectStage, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     
-    // FIX: Ensure school.stages is handled as an array even if it's null/undefined from DB.
-    const stagesToDisplay = (school.stages || []).filter(stage => accessibleStages.includes(stage));
+    // FIX: Robustly ensure school.stages is an array before filtering to prevent crashes from malformed data.
+    const stagesToDisplay = Array.isArray(school.stages)
+        ? school.stages.filter(stage => accessibleStages.includes(stage))
+        : [];
 
     return (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border-t-8 border-gray-800 dark:border-gray-600 animate-fade-in text-center w-full relative">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Teacher, Subject, EducationalStage, School } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
@@ -40,7 +39,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
 
     // Filter teachers based on the selected educational stage
     const filteredTeachers = useMemo(() => {
-        return teachers.filter(teacher => {
+        return (teachers || []).filter(teacher => {
             // Defensively check if assignments exists and is an object to prevent crashes
             if (!teacher.assignments || typeof teacher.assignments !== 'object') {
                 return false;
