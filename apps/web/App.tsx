@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult } from '../../packages/core/types';
+import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, MOCK_SCHOOLS, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
@@ -343,7 +344,7 @@ const App: React.FC = () => {
 
     } catch (error: any) {
       console.error("Error adding school:", error);
-      alert(`Failed to add school: ${error.message}`);
+      alert(`${t('failedToAddSchool' as any)}: ${error.message}`);
     } finally {
         setIsLoading(false);
     }
@@ -360,7 +361,7 @@ const App: React.FC = () => {
                 if (error) throw error;
                 setSchools(prev => prev.filter(s => s.id !== schoolId));
             } catch (error: any) {
-                alert(`Failed to delete school: ${error.message}`);
+                alert(`${t('failedToDeleteSchool' as any)}: ${error.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -372,6 +373,12 @@ const App: React.FC = () => {
     if (!school) return;
     try {
         setIsLoading(true);
+         const { data: existing, error: checkError } = await supabase.from('principals').select('id').eq('login_code', loginCode).limit(1);
+        if (checkError) throw checkError;
+        if (existing && existing.length > 0) {
+            throw new Error(t('principalCodeExists' as any));
+        }
+
         const { error } = await supabase.from('principals').insert({
             school_id: school.id,
             stage,
@@ -387,7 +394,7 @@ const App: React.FC = () => {
         if(allSchoolsError) throw allSchoolsError;
         setSchools(snakeToCamelCase(allSchools));
     } catch (error: any) {
-        alert(`Failed to add principal: ${error.message}`);
+        alert(`${t('failedToAddPrincipal' as any)}: ${error.message}`);
     } finally {
         setIsLoading(false);
     }
@@ -410,7 +417,7 @@ const App: React.FC = () => {
                 if(allSchoolsError) throw allSchoolsError;
                 setSchools(snakeToCamelCase(allSchools));
             } catch (error: any) {
-                alert(`Failed to delete principal: ${error.message}`);
+                alert(`${t('failedToDeletePrincipal' as any)}: ${error.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -422,6 +429,12 @@ const App: React.FC = () => {
       if (!school) return;
       try {
           setIsLoading(true);
+           const { data: existing, error: checkError } = await supabase.from('principals').select('id').eq('login_code', newCode).neq('id', principalId).limit(1);
+          if (checkError) throw checkError;
+          if (existing && existing.length > 0) {
+              throw new Error(t('principalCodeExists' as any));
+          }
+
           const { error: updateError } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
           if (updateError) throw updateError;
           const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals:principals(*)').eq('id', school.id).single();
@@ -432,11 +445,107 @@ const App: React.FC = () => {
           if(allSchoolsError) throw allSchoolsError;
           setSchools(snakeToCamelCase(allSchools));
       } catch (error: any) {
-          alert(`Failed to update code: ${error.message}`);
+          alert(`${t('failedToUpdateCode' as any)}: ${error.message}`);
       } finally {
           setIsLoading(false);
       }
   };
+
+  const handleToggleStage = async (stage: EducationalStage) => {
+    if (!school) return;
+    try {
+        setIsLoading(true);
+        const currentStages = school.stages || [];
+        const newStages = currentStages.includes(stage)
+            ? currentStages.filter(s => s !== stage)
+            : [...currentStages, stage];
+
+        const { data: updatedSchoolData, error } = await supabase
+            .from('schools')
+            .update({ stages: newStages })
+            .eq('id', school.id)
+            .select('*, principals:principals(*)')
+            .single();
+
+        if (error) throw error;
+        
+        const camelSchool = snakeToCamelCase(updatedSchoolData);
+        setSchool(camelSchool);
+        setSchools(prevSchools => prevSchools.map(s => s.id === school.id ? camelSchool : s));
+
+    } catch (error: any) {
+        alert(`Failed to update stages: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleToggleSchoolStatus = async () => {
+    if (!school) return;
+    try {
+        setIsLoading(true);
+        const newStatus = !school.isActive;
+        const { data: updatedSchoolData, error } = await supabase
+            .from('schools')
+            .update({ is_active: newStatus })
+            .eq('id', school.id)
+            .select('*, principals:principals(*)')
+            .single();
+        if (error) throw error;
+        const camelSchool = snakeToCamelCase(updatedSchoolData);
+        setSchool(camelSchool);
+        setSchools(prev => prev.map(s => s.id === school.id ? camelSchool : s));
+    } catch (error: any) {
+        alert(`Failed to update school status: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleToggleFeatureFlag = async (feature: SchoolFeature) => {
+    if (!school) return;
+    try {
+        setIsLoading(true);
+        const currentFlags = school.featureFlags || {};
+        const newFlags = { ...currentFlags, [feature]: !currentFlags[feature] };
+        
+        const { data: updatedSchoolData, error } = await supabase
+            .from('schools')
+            .update({ feature_flags: newFlags })
+            .eq('id', school.id)
+            .select('*, principals:principals(*)')
+            .single();
+        if (error) throw error;
+        const camelSchool = snakeToCamelCase(updatedSchoolData);
+        setSchool(camelSchool);
+        setSchools(prev => prev.map(s => s.id === school.id ? camelSchool : s));
+    } catch (error: any) {
+        alert(`Failed to update feature flag: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleUpdateSchoolDetails = async (schoolId: string, name: string, logoUrl: string) => {
+    try {
+        setIsLoading(true);
+        const { data: updatedSchoolData, error } = await supabase
+            .from('schools')
+            .update({ name: name, logo_url: logoUrl })
+            .eq('id', schoolId)
+            .select('*, principals:principals(*)')
+            .single();
+        if (error) throw error;
+        const camelSchool = snakeToCamelCase(updatedSchoolData);
+        setSchool(camelSchool);
+        setSchools(prev => prev.map(s => s.id === schoolId ? camelSchool : s));
+    } catch (error: any) {
+        alert(`Failed to update school details: ${error.message}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   const renderPage = () => {
     if (!session && userRole !== UserRole.SuperAdmin && page !== Page.Maintenance) {
@@ -452,7 +561,21 @@ const App: React.FC = () => {
             return <SuperAdminDashboard schools={schools} onAddSchool={handleAddSchool} onDeleteSchool={handleDeleteSchool} onManageSchool={(id) => { const s = schools.find(sc=>sc.id===id); if(s) { setSchool(s); setPage(Page.SuperAdminSchoolManagement); } }} onLogout={handleLogout} onNavigate={navigateTo}/>
         case Page.SuperAdminSchoolManagement:
             if (!school) return null;
-            return <SuperAdminSchoolManagement school={school} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onToggleStatus={() => { /* ... */ }} onToggleStage={() => { /* ... */ }} onAddPrincipal={handleAddPrincipal} onDeletePrincipal={handleDeletePrincipal} onUpdatePrincipalCode={handleUpdatePrincipalCode} onToggleFeatureFlag={() => { /* ... */ }} onEnterFeaturePage={(p, s) => { setSelectedStage(s); setPage(p); setIsImpersonating(true); }} onUpdateSchoolDetails={() => {}} />;
+            return <SuperAdminSchoolManagement 
+                school={school} 
+                onBack={() => setPage(Page.SuperAdminDashboard)} 
+                onLogout={handleLogout} 
+                toggleDarkMode={toggleDarkMode} 
+                isDarkMode={isDarkMode} 
+                onToggleStatus={handleToggleSchoolStatus} 
+                onToggleStage={handleToggleStage} 
+                onAddPrincipal={handleAddPrincipal} 
+                onDeletePrincipal={handleDeletePrincipal} 
+                onUpdatePrincipalCode={handleUpdatePrincipalCode} 
+                onToggleFeatureFlag={handleToggleFeatureFlag} 
+                onEnterFeaturePage={(p, s) => { setSelectedStage(s); setPage(p); setIsImpersonating(true); }} 
+                onUpdateSchoolDetails={handleUpdateSchoolDetails} 
+            />;
         case Page.PrincipalStageSelection:
             if (!school || !currentUser) return null;
             const principal = currentUser as Principal;

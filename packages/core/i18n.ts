@@ -21,7 +21,6 @@ const translations = {
     requestHelp: "طلب مساعدة",
     helpNote: "ملاحظة: عند الضغط على طلب مساعدة ستتحول تلقائيا إلى الإتصال برقم هاتفي.",
     invalidCode: "الرمز المدخل غير صحيح. الرجاء المحاولة مرة أخرى أو طلب المساعدة.",
-    loginErrorUserExistsUnconfirmed: "فشل تسجيل الدخول. هذا المستخدم موجود بالفعل ولكن لا يمكن تسجيل دخوله. الرجاء التأكد من تعطيل خيار 'Confirm email' في إعدادات المصادقة بمشروع Supabase الخاص بك.",
     superAdminDashboardTitle: "لوحة تحكم المدير الخارق",
     addSchoolSectionTitle: "إضافة مدرسة جديدة",
     newSchoolNamePlaceholder: "اسم المدرسة الجديدة",
@@ -448,6 +447,14 @@ const translations = {
     supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
     supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email' في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
+
+    // FIX: Added keys for better error handling
+    principalCodeExists: "هذا الرمز السري مستخدم بالفعل. الرجاء اختيار رمز آخر.",
+    failedToAddPrincipal: "فشل في إضافة المدير",
+    failedToUpdateCode: "فشل في تحديث الرمز",
+    failedToAddSchool: "فشل في إضافة المدرسة",
+    failedToDeleteSchool: "فشل في حذف المدرسة",
+    failedToDeletePrincipal: "فشل في حذف المدير",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -468,7 +475,6 @@ const translations = {
     requestHelp: "Demander de l'aide",
     helpNote: "Note : En cliquant sur 'Demander de l'aide', vous serez automatiquement redirigé pour appeler un numéro de téléphone.",
     invalidCode: "Code invalide. Veuillez réessayer ou demander de l'aide.",
-    loginErrorUserExistsUnconfirmed: "Échec de la connexion. Cet utilisateur existe déjà mais ne peut pas être connecté. Veuillez vous assurer que l'option 'Confirm email' est désactivée dans les paramètres d'authentification de votre projet Supabase.",
     superAdminDashboardTitle: "Tableau de bord Super Admin",
     addSchoolSectionTitle: "Ajouter une nouvelle école",
     newSchoolNamePlaceholder: "Nom de la nouvelle école",
@@ -867,6 +873,14 @@ const translations = {
     supabaseDisableEmailConfirm: "Désactiver l'option 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
     supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email' dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
+    
+    // FIX: Added keys for better error handling
+    principalCodeExists: "Ce code secret est déjà utilisé. Veuillez en choisir un autre.",
+    failedToAddPrincipal: "Échec de l'ajout du directeur",
+    failedToUpdateCode: "Échec de la mise à jour du code",
+    failedToAddSchool: "Échec de l'ajout de l'école",
+    failedToDeleteSchool: "Échec de la suppression de l'école",
+    failedToDeletePrincipal: "Échec de la suppression du directeur",
   },
   en: {
     // ...
