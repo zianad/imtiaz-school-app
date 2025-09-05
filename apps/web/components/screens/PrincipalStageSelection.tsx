@@ -25,9 +25,10 @@ const STAGE_COLORS: { [key in EducationalStage]: string } = {
 const PrincipalStageSelection: React.FC<PrincipalStageSelectionProps> = ({ school, accessibleStages, onSelectStage, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     
-    // FIX: Robustly ensure school.stages is an array before filtering to prevent crashes from malformed data.
-    const stagesToDisplay = Array.isArray(school.stages)
-        ? school.stages.filter(stage => accessibleStages.includes(stage))
+    // FIX: Made component more robust by adding null checks for school and accessibleStages before filtering.
+    const schoolStages = school?.stages;
+    const stagesToDisplay = Array.isArray(schoolStages)
+        ? schoolStages.filter(stage => Array.isArray(accessibleStages) && accessibleStages.includes(stage))
         : [];
 
     return (
