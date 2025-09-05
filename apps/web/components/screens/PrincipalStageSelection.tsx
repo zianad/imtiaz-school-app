@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { School, EducationalStage } from '../../../../packages/core/types';
 import LogoutButton from '../common/LogoutButton';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -25,11 +25,15 @@ const STAGE_COLORS: { [key in EducationalStage]: string } = {
 const PrincipalStageSelection: React.FC<PrincipalStageSelectionProps> = ({ school, accessibleStages, onSelectStage, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     
-    // FIX: Made component more robust by adding null checks for school and accessibleStages before filtering.
-    const schoolStages = school?.stages;
-    const stagesToDisplay = Array.isArray(schoolStages)
-        ? schoolStages.filter(stage => Array.isArray(accessibleStages) && accessibleStages.includes(stage))
-        : [];
+    const stagesToDisplay = useMemo(() => {
+        // Guard against all possible undefined/null/non-array props to prevent crashes.
+        if (!school || !Array.isArray(school.stages) || !Array.isArray(accessibleStages)) {
+            return [];
+        }
+        
+        // Filter the school's active stages to only show the ones the principal can access.
+        return school.stages.filter(stage => accessibleStages.includes(stage));
+    }, [school, accessibleStages]);
 
     return (
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border-t-8 border-gray-800 dark:border-gray-600 animate-fade-in text-center w-full relative">
