@@ -236,9 +236,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleLogin = useCallback(async (code: string) => {
-    code = code.trim();
-    if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
+  const handleLogin = useCallback(async (rawCode: string) => {
+    const code = rawCode.trim().toLowerCase();
+    if (code === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
         const { error } = await supabase.auth.signInWithPassword({
             email: SUPER_ADMIN_EMAIL,
             password: SUPER_ADMIN_PASSWORD,
@@ -268,23 +268,20 @@ const App: React.FC = () => {
         }
         
         if (userMatch) {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email: `${code}@${userMatch.schoolId}.com`,
-                password: code,
-            });
+            const email = `${code}@${userMatch.schoolId}.com`;
+            // FIX: Supabase auth has a minimum password length requirement (default is 6).
+            // A short login code would fail during the automatic sign-up process.
+            // We pad the code to ensure the derived password meets the requirement.
+            const password = code.padEnd(8, '_');
+            
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
             if (signInError && signInError.message.includes('Invalid login credentials')) {
-                const { error: signUpError } = await supabase.auth.signUp({
-                    email: `${code}@${userMatch.schoolId}.com`,
-                    password: code,
-                });
+                const { error: signUpError } = await supabase.auth.signUp({ email, password });
                 if (signUpError && !signUpError.message.includes('User already registered')) {
                     throw signUpError;
                 }
-                const { error: retrySignInError } = await supabase.auth.signInWithPassword({
-                    email: `${code}@${userMatch.schoolId}.com`,
-                    password: code,
-                });
+                const { error: retrySignInError } = await supabase.auth.signInWithPassword({ email, password });
                 if (retrySignInError) throw retrySignInError;
             } else if (signInError) {
                 throw signInError;
@@ -360,7 +357,7 @@ const App: React.FC = () => {
         .from('principals')
         .insert({
           name: `${t('principal')} ${t('primaryStage')}`,
-          login_code: principalCode,
+          login_code: principalCode.trim().toLowerCase(),
           stage: EducationalStage.PRIMARY,
           school_id: newSchoolId,
         });
@@ -405,6 +402,7 @@ const App: React.FC = () => {
     if (!school) return;
     try {
         setIsLoading(true);
+        const lowerLoginCode = loginCode.trim().toLowerCase();
         // Comprehensive check for code uniqueness within the school
         const tables = [
             { name: 'principals', codeCol: 'login_code' },
@@ -416,7 +414,7 @@ const App: React.FC = () => {
                 .from(table.name)
                 .select('id')
                 .eq('school_id', school.id)
-                .eq(table.codeCol, loginCode)
+                .eq(table.codeCol, lowerLoginCode)
                 .limit(1);
             if (checkError) throw checkError;
             if (existing && existing.length > 0) {
@@ -428,7 +426,7 @@ const App: React.FC = () => {
             school_id: school.id,
             stage,
             name,
-            login_code: loginCode
+            login_code: lowerLoginCode
         });
         if (error) throw error;
         
@@ -468,6 +466,7 @@ const App: React.FC = () => {
       if (!school) return;
       try {
           setIsLoading(true);
+          const lowerNewCode = newCode.trim().toLowerCase();
           const tables = [
             { name: 'principals', codeCol: 'login_code' },
             { name: 'teachers', codeCol: 'login_code' },
@@ -475,7 +474,7 @@ const App: React.FC = () => {
           ];
 
           for (const table of tables) {
-              let query = supabase.from(table.name).select('id').eq('school_id', school.id).eq(table.codeCol, newCode);
+              let query = supabase.from(table.name).select('id').eq('school_id', school.id).eq(table.codeCol, lowerNewCode);
               if (table.name === 'principals') {
                   query = query.neq('id', principalId);
               }
@@ -487,7 +486,7 @@ const App: React.FC = () => {
               }
           }
 
-          const { error: updateError } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
+          const { error: updateError } = await supabase.from('principals').update({ login_code: lowerNewCode }).match({ id: principalId });
           if (updateError) throw updateError;
           await refreshSchoolState(school.id);
       } catch (error: any) {
