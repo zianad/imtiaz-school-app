@@ -608,19 +608,16 @@ const App: React.FC = () => {
             if (!school || !currentUser) return null;
             const principal = currentUser as Principal;
 
-            // FIX: Robustly determine accessible stages to prevent crash from inconsistent data structure.
             let accessibleStages: EducationalStage[] = [];
             if (school.principals) {
                 if (Array.isArray(school.principals)) {
-                    // Handle case where principals is an unprocessed array from DB
                     accessibleStages = school.principals
-                        .filter(p => p.id === principal.id)
+                        .filter(p => p && p.id === principal.id)
                         .map(p => p.stage);
                 } else if (typeof school.principals === 'object') {
-                    // Handle case where principals is the expected object grouped by stage
                     accessibleStages = Object.entries(school.principals)
                         .filter(([_, principalList]) => 
-                            Array.isArray(principalList) && principalList.some(p => p.id === principal.id)
+                            Array.isArray(principalList) && principalList.some(p => p && p.id === principal.id)
                         )
                         .map(([stageKey]) => stageKey as EducationalStage);
                 }
