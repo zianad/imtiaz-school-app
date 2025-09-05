@@ -446,7 +446,7 @@ const translations = {
     supabaseAllowSignups: "تفعيل خيار 'Allow new users to sign up'",
     supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
-    supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email' في إعدادات المصادقة (Authentication -> Settings) داخل مشروعك على Supabase. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
+    supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email'. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
 
     // FIX: Added keys for better error handling
     principalCodeExists: "هذا الرمز السري مستخدم بالفعل. الرجاء اختيار رمز آخر.",
@@ -872,7 +872,7 @@ const translations = {
     supabaseAllowSignups: "Activer l'option 'Allow new users to sign up'",
     supabaseDisableEmailConfirm: "Désactiver l'option 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
-    supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email' dans les paramètres d'authentification (Authentication -> Settings) de votre projet Supabase. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
+    supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email'. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
     
     // FIX: Added keys for better error handling
     principalCodeExists: "Ce code secret est déjà utilisé. Veuillez en choisir un autre.",

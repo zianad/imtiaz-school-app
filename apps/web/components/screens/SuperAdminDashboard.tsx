@@ -111,16 +111,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
             </form>
             
             <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 rounded-r-lg">
-                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseEmailConfirmationNoteTitle')}</h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseEmailConfirmationNoteBody')}</p>
-                <div className="mt-3">
-                    <h4 className="font-semibold text-gray-700 dark:text-gray-300">{t('supabaseSettingsChecklistTitle')}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('supabaseSettingsInstructions')}</p>
-                    <ul className="list-disc list-inside text-sm mt-1 text-gray-600 dark:text-gray-300">
-                        <li>{t('supabaseAllowSignups')}</li>
-                        <li>{t('supabaseDisableEmailConfirm')}</li>
-                    </ul>
-                </div>
+                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseSettingsChecklistTitle')}</h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseSettingsInstructions')}</p>
+                <ul className="list-disc list-inside space-y-2 mt-3 text-gray-700 dark:text-gray-300">
+                    <li>
+                        <strong>{t('supabaseAllowSignups')}:</strong> <span className="font-bold text-green-600 dark:text-green-400">ON</span>
+                    </li>
+                    <li>
+                         <strong>{t('supabaseDisableEmailConfirm')}:</strong> <span className="font-bold text-red-600 dark:text-red-400">OFF</span>
+                         <p className="text-xs text-gray-500 dark:text-gray-400 pl-4">{t('supabaseEmailConfirmationNoteBody')}</p>
+                    </li>
+                </ul>
             </div>
 
             <div>

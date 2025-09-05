@@ -373,7 +373,7 @@ const App: React.FC = () => {
 
     } catch (error: any) {
       console.error("Error adding school:", error);
-      alert(`${t('failedToAddSchool' as any)}: ${error.message}`);
+      alert(`${t('failedToAddSchool')}: ${error.message}`);
     } finally {
         setIsLoading(false);
     }
@@ -390,7 +390,7 @@ const App: React.FC = () => {
                 if (error) throw error;
                 setSchools(prev => prev.filter(s => s.id !== schoolId));
             } catch (error: any) {
-                alert(`${t('failedToDeleteSchool' as any)}: ${error.message}`);
+                alert(`${t('failedToDeleteSchool')}: ${error.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -454,7 +454,7 @@ const App: React.FC = () => {
                 if (error) throw error;
                 await refreshSchoolState(school.id);
             } catch (error: any) {
-                alert(`${t('failedToDeletePrincipal' as any)}: ${error.message}`);
+                alert(`${t('failedToDeletePrincipal')}: ${error.message}`);
             } finally {
                 setIsLoading(false);
             }
