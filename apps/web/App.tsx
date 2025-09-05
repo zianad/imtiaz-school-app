@@ -282,7 +282,15 @@ const App: React.FC = () => {
                     throw signUpError;
                 }
                 const { error: retrySignInError } = await supabase.auth.signInWithPassword({ email, password });
-                if (retrySignInError) throw retrySignInError;
+                // FIX: Add specific error handling for the "Email not confirmed" case. This provides
+                // the user with a clear, actionable message about the necessary Supabase configuration
+                // change, directly addressing the most likely root cause of login failures for new users.
+                if (retrySignInError) {
+                    if (retrySignInError.message.includes('Email not confirmed')) {
+                        throw new Error('SUPABASE_EMAIL_CONFIRMATION_ERROR');
+                    }
+                    throw retrySignInError;
+                }
             } else if (signInError) {
                 throw signInError;
             }

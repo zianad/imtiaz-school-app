@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { HELP_PHONE_NUMBER } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -13,7 +12,7 @@ interface UnifiedLoginScreenProps {
 
 const EventHorizonLogo = () => (
     <div className="mb-6">
-        <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+        <svg version="1.1" id="Layer_1" xmlns="http://www.w.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 			 viewBox="0 0 595.3 841.9" xmlSpace="preserve" className="w-56 h-auto mx-auto">
             <path style={{fill:'#E30613'}} d="M357.4,167.9c-33.2,68.8-67.6,125.4-108.1,120.9c-5.4-0.6-10.8-0.8-16.2,0c-40.9,5.6-31.6,35.1-64.7,114 l49-73.5l2.5,42.3c0.7,11.5-0.7,23-4.2,34l-8,25.2c29.4-23.5,52.8-48.5,75.1-83.2l3.1-28.9c0-2.2,0.5-4.3,1.4-6.3L357.4,167.9z"/>
             <path style={{fill:'#006633'}} d="M367.1,163.3c-38.3,139.9-102.4,274.6-299.7,361c49-13.5,89.4-33.2,127.7-59.2l-26,96l60.8-120.5l32.7-31.7	l59.7,152.7l-34.2-181.3C333.3,324.4,362.5,250.1,367.1,163.3z"/>
@@ -111,7 +110,12 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
             }
         } catch (err: any) {
             setStatus('incorrect');
-             if (err.message.includes('Invalid login credentials')) {
+            // FIX: Add specific error handling for the "Email not confirmed" case.
+            // This provides a much clearer, actionable error message to the user,
+            // guiding them to the correct Supabase setting that is blocking login.
+            if (err.message === 'SUPABASE_EMAIL_CONFIRMATION_ERROR') {
+                setError(t('supabaseEmailConfirmationError'));
+            } else if (err.message.includes('Invalid login credentials')) {
                 setError(t('invalidCode'));
             } else {
                 setError(err.message);
@@ -168,7 +172,9 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                     {status === 'checking' || status === 'correct' ? '...' : t('login')}
                 </button>
                 {status === 'incorrect' && error && (
-                    <p className="text-red-500 text-sm mt-2">{error}</p>
+                    <div className="text-red-500 dark:text-red-400 text-sm mt-2 text-right bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        {error.split('\n').map((line, index) => <p key={index}>{line}</p>)}
+                    </div>
                 )}
             </form>
 

@@ -455,6 +455,8 @@ const translations = {
     failedToAddSchool: "فشل في إضافة المدرسة",
     failedToDeleteSchool: "فشل في حذف المدرسة",
     failedToDeletePrincipal: "فشل في حذف المدير",
+    // FIX: Add a specific, user-friendly error message for the email confirmation issue.
+    supabaseEmailConfirmationError: "فشل الدخول: خاصية تأكيد البريد الإلكتروني مفعلة.\n\n**لحل المشكلة:**\n1. اذهب إلى لوحة تحكم Supabase.\n2. اختر 'Authentication' ثم 'Settings'.\n3. قم بتعطيل خيار 'Confirm email'.\n4. اذهب إلى 'Users'، واحذف هذا المستخدم.\n5. حاول تسجيل الدخول مرة أخرى.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -881,6 +883,8 @@ const translations = {
     failedToAddSchool: "Échec de l'ajout de l'école",
     failedToDeleteSchool: "Échec de la suppression de l'école",
     failedToDeletePrincipal: "Échec de la suppression du directeur",
+    // FIX: Add a specific, user-friendly error message for the email confirmation issue.
+    supabaseEmailConfirmationError: "Connexion échouée : La confirmation par e-mail est activée.\n\n**Pour corriger :**\n1. Allez sur votre tableau de bord Supabase.\n2. Allez à 'Authentication' puis 'Settings'.\n3. Désactivez l'option 'Confirm email'.\n4. Allez à 'Users', et supprimez cet utilisateur.\n5. Réessayez de vous connecter.",
   },
   en: {
     // ...
