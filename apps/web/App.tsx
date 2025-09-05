@@ -139,7 +139,7 @@ const App: React.FC = () => {
     if (refreshError) throw refreshError;
     setSchool(processSchoolData(refreshedSchool));
 
-    const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+    const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
     if (allSchoolsError) throw allSchoolsError;
     setSchools(processSchoolData(allSchools));
   }, [processSchoolData]);
@@ -246,7 +246,7 @@ const App: React.FC = () => {
         if (error) throw error;
         setUserRole(UserRole.SuperAdmin);
         setPage(Page.SuperAdminDashboard);
-        const { data, error: schoolError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+        const { data, error: schoolError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
         if(schoolError) throw schoolError;
         setSchools(processSchoolData(data));
     } else {
@@ -272,17 +272,20 @@ const App: React.FC = () => {
                 email: `${code}@${userMatch.schoolId}.com`,
                 password: code,
             });
+
             if (signInError && signInError.message.includes('Invalid login credentials')) {
-                 const { error: signUpError } = await supabase.auth.signUp({
+                const { error: signUpError } = await supabase.auth.signUp({
                     email: `${code}@${userMatch.schoolId}.com`,
                     password: code,
                 });
-                if(signUpError) throw signUpError;
-                 const { error: retrySignInError } = await supabase.auth.signInWithPassword({
+                if (signUpError && !signUpError.message.includes('User already registered')) {
+                    throw signUpError;
+                }
+                const { error: retrySignInError } = await supabase.auth.signInWithPassword({
                     email: `${code}@${userMatch.schoolId}.com`,
                     password: code,
                 });
-                if(retrySignInError) throw retrySignInError;
+                if (retrySignInError) throw retrySignInError;
             } else if (signInError) {
                 throw signInError;
             }
@@ -367,7 +370,7 @@ const App: React.FC = () => {
         throw principalError;
       }
 
-      const { data, error: refreshError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, principals:principals(id, name, login_code, stage)');
+      const { data, error: refreshError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
       if (refreshError) throw refreshError;
       setSchools(processSchoolData(data));
 
