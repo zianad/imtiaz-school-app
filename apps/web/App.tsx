@@ -269,10 +269,10 @@ const App: React.FC = () => {
         
         if (userMatch) {
             const email = `${code}@${userMatch.schoolId}.com`;
-            // FIX: The previous padding method was insufficient for Supabase's password complexity rules
-            // when using simple numeric codes. Appending a fixed, complex string ensures the password
-            // meets both length and complexity requirements, ensuring successful user sign-up on first login.
-            const password = `${code}_ImtiazApp!`;
+            // FIX: Updated the password generation logic again for increased complexity to satisfy
+            // stricter cloud authentication policies. This ensures that even simple numeric login codes
+            // result in a strong password, preventing sign-up failures on the first login attempt.
+            const password = `ImtiazApp_${code}_S3cure!`;
             
             const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
