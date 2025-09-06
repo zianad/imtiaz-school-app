@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Page, School, EducationalStage } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
 
 interface PrincipalManagementMenuProps {
     school: School;
@@ -20,12 +21,35 @@ interface PrincipalManagementMenuProps {
 const PrincipalManagementMenu: React.FC<PrincipalManagementMenuProps> = ({ school, stage, onSelectAction, onBack, onLogout, isDesktop = false, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     
-    const teacherCount = school.teachers.length;
-    const studentCount = school.students.filter(s => s.stage === stage).length;
+    const [studentCount, setStudentCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchCounts = useCallback(async () => {
+        setIsLoading(true);
+        const { count, error } = await supabase
+            .from('students')
+            .select('*', { count: 'exact', head: true })
+            .eq('school_id', school.id)
+            .eq('stage', stage);
+        
+        if (error) {
+            console.error("Error fetching student count:", error);
+        } else {
+            setStudentCount(count || 0);
+        }
+        setIsLoading(false);
+    }, [school.id, stage]);
+
+    useEffect(() => {
+        fetchCounts();
+    }, [fetchCounts]);
+    
+    const teacherCount = school.teachers?.length || 0;
+    const studentCountDisplay = isLoading ? '...' : studentCount;
 
     const actions = [
         { label: `${t('manageTeachers')} (${teacherCount})`, page: Page.PrincipalManageTeachers, icon: '👨‍🏫' },
-        { label: `${t('manageStudents')} (${studentCount})`, page: Page.PrincipalManageStudents, icon: '🎓' },
+        { label: `${t('manageStudents')} (${studentCountDisplay})`, page: Page.PrincipalManageStudents, icon: '🎓' },
         { label: t('manageFees'), page: Page.PrincipalFeeManagement, icon: '💰' },
     ];
 
