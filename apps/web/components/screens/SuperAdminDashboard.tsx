@@ -4,12 +4,6 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import { compressImage } from '../../../../packages/core/utils';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
-import { supabase, isSupabaseConfigured } from '../../../../packages/core/supabaseClient';
-
-interface SupabaseSettingsStatus {
-    allowNewUsers: boolean | 'loading' | 'error';
-    disableEmailConfirm: boolean | 'loading' | 'error';
-}
 
 interface SuperAdminDashboardProps {
     schools: School[];
@@ -26,32 +20,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
     const [logoUrl, setLogoUrl] = useState('');
     const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [settingsStatus, setSettingsStatus] = useState<SupabaseSettingsStatus>({
-        allowNewUsers: 'loading',
-        disableEmailConfirm: 'loading',
-    });
-
-    useEffect(() => {
-        const checkSupabaseSettings = async () => {
-             if (!isSupabaseConfigured) {
-                setSettingsStatus({ allowNewUsers: true, disableEmailConfirm: true }); // Assume correct for mock
-                return;
-            }
-            try {
-                // This is a simplified check. A real implementation would require a Supabase Edge Function
-                // to read config, as it's not exposed to the client. We'll simulate a check.
-                // For now, we assume the user needs to check manually and we can't verify automatically.
-                // Let's change the state to 'error' to prompt manual check.
-                 setSettingsStatus({ allowNewUsers: 'error', disableEmailConfirm: 'error' });
-            } catch (error) {
-                console.error("Could not check Supabase settings:", error);
-                setSettingsStatus({ allowNewUsers: 'error', disableEmailConfirm: 'error' });
-            }
-        };
-        checkSupabaseSettings();
-    }, []);
-
-
+   
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
         if (schoolName.trim() && principalCode.trim()) {
@@ -85,12 +54,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
     const handleDelete = (schoolId: string, name: string) => {
         onDeleteSchool(schoolId, name);
     }
-    
-    const renderStatusIcon = (status: boolean | 'loading' | 'error') => {
-        if (status === 'loading') return <span className="animate-spin text-sm">⏳</span>;
-        if (status === 'error') return <span className="text-red-500 font-bold">❌</span>;
-        return status ? <span className="text-green-500 font-bold">✔️</span> : <span className="text-red-500 font-bold">❌</span>;
-    };
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 animate-fade-in w-full relative">
@@ -148,20 +111,14 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
             
             <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 rounded-r-lg">
                 <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseSettingsChecklistTitle')}</h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{t('supabaseSettingsInstructions')}</p>
-                <ul className="list-inside space-y-2 mt-3 text-gray-700 dark:text-gray-300">
-                     <li className="flex items-center gap-2">
-                        {renderStatusIcon(settingsStatus.allowNewUsers)}
-                        <span>{t('supabaseAllowSignups')}</span>
-                        {settingsStatus.allowNewUsers === 'error' && <span className="text-xs text-orange-600 dark:text-orange-400">(تحقق يدوي مطلوب)</span>}
-                    </li>
-                     <li className="flex items-center gap-2">
-                        {renderStatusIcon(settingsStatus.disableEmailConfirm)}
-                        <span>{t('supabaseDisableEmailConfirm')}</span>
-                         {settingsStatus.disableEmailConfirm === 'error' && <span className="text-xs text-orange-600 dark:text-orange-400">(تحقق يدوي مطلوب)</span>}
-                    </li>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">
+                    {t('supabaseSettingsInstructions')}
+                </p>
+                <ul className="list-disc list-inside space-y-1 mt-2 text-gray-700 dark:text-gray-300 text-sm">
+                    <li>{t('supabaseAllowSignups')}</li>
+                    <li>{t('supabaseDisableEmailConfirm')}</li>
                 </ul>
-                <p className="text-xs text-gray-500 dark:text-gray-400 pl-4 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                     بالإضافة إلى ذلك، تأكد من أن سياسات الأمان (RLS) على جداول `principals`, `teachers`, `students` تسمح بالقراءة (SELECT) لدور `anon`.
                 </p>
             </div>

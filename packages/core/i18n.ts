@@ -442,7 +442,7 @@ const translations = {
     confirmDeleteItem: "هل أنت متأكد من رغبتك في حذف \"{item}\"؟ لا يمكن التراجع عن هذا الإجراء.",
     actions: "الإجراءات",
     supabaseSettingsChecklistTitle: "قائمة تحقق لإعدادات Supabase",
-    supabaseSettingsInstructions: "لضمان عمل التطبيق بشكل صحيح، يرجى التأكد من أن الإعدادات التالية مطبقة في مشروعك على Supabase (Authentication -> Settings):",
+    supabaseSettingsInstructions: "لضمان عمل التطبيق بشكل صحيح، **يجب** التأكد من أن الإعدادات التالية مطبقة في مشروعك على Supabase (اذهب إلى Authentication -> Settings):",
     supabaseAllowSignups: "تفعيل خيار 'Allow new users to sign up'",
     supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
@@ -455,8 +455,8 @@ const translations = {
     failedToAddSchool: "فشل في إضافة المدرسة",
     failedToDeleteSchool: "فشل في حذف المدرسة",
     failedToDeletePrincipal: "فشل في حذف المدير",
-    // FIX: Add a specific, user-friendly error message for the email confirmation issue.
     supabaseEmailConfirmationError: "فشل الدخول: خاصية تأكيد البريد الإلكتروني مفعلة.\n\n**لحل المشكلة:**\n1. اذهب إلى لوحة تحكم Supabase.\n2. اختر 'Authentication' ثم 'Settings'.\n3. قم بتعطيل خيار 'Confirm email'.\n4. اذهب إلى 'Users'، واحذف هذا المستخدم.\n5. حاول تسجيل الدخول مرة أخرى.",
+    supabaseSignupsDisabledError: "فشل الدخول: تسجيل المستخدمين الجدد معطل.\n\n**لحل المشكلة:**\n1. اذهب إلى لوحة تحكم Supabase.\n2. اختر 'Authentication' ثم 'Settings'.\n3. قم **بتفعيل** خيار 'Allow new users to sign up'.\n4. حاول تسجيل الدخول مرة أخرى.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -870,7 +870,7 @@ const translations = {
     confirmDeleteItem: "Êtes-vous sûr de vouloir supprimer \"{item}\" ? Cette action est irréversible.",
     actions: "Actions",
     supabaseSettingsChecklistTitle: "Checklist des paramètres Supabase",
-    supabaseSettingsInstructions: "Pour assurer le bon fonctionnement de l'application, veuillez vérifier que les paramètres suivants sont appliqués dans votre projet Supabase (Authentication -> Settings) :",
+    supabaseSettingsInstructions: "Pour assurer le bon fonctionnement de l'application, **vous devez** vérifier que les paramètres suivants sont appliqués dans votre projet Supabase (Allez à Authentication -> Settings) :",
     supabaseAllowSignups: "Activer l'option 'Allow new users to sign up'",
     supabaseDisableEmailConfirm: "Désactiver l'option 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
@@ -883,8 +883,8 @@ const translations = {
     failedToAddSchool: "Échec de l'ajout de l'école",
     failedToDeleteSchool: "Échec de la suppression de l'école",
     failedToDeletePrincipal: "Échec de la suppression du directeur",
-    // FIX: Add a specific, user-friendly error message for the email confirmation issue.
     supabaseEmailConfirmationError: "Connexion échouée : La confirmation par e-mail est activée.\n\n**Pour corriger :**\n1. Allez sur votre tableau de bord Supabase.\n2. Allez à 'Authentication' puis 'Settings'.\n3. Désactivez l'option 'Confirm email'.\n4. Allez à 'Users', et supprimez cet utilisateur.\n5. Réessayez de vous connecter.",
+    supabaseSignupsDisabledError: "Connexion échouée : L'inscription de nouveaux utilisateurs est désactivée.\n\n**Pour corriger :**\n1. Allez sur votre tableau de bord Supabase.\n2. Allez à 'Authentication' puis 'Settings'.\n3. **Activez** l'option 'Allow new users to sign up'.\n4. Réessayez de vous connecter.",
   },
   en: {
     // ...

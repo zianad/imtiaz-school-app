@@ -275,8 +275,14 @@ const App: React.FC = () => {
 
             if (signInError && signInError.message.includes('Invalid login credentials')) {
                 const { error: signUpError } = await supabase.auth.signUp({ email, password });
-                if (signUpError && !signUpError.message.includes('User already registered')) {
-                    throw signUpError;
+                if (signUpError) {
+                    if (signUpError.message.includes('User already registered')) {
+                        // This is okay, proceed to sign in again.
+                    } else if (signUpError.message.includes('Signups not allowed')) {
+                        throw new Error('SUPABASE_SIGNUPS_DISABLED_ERROR');
+                    } else {
+                        throw signUpError; // Throw other signup errors
+                    }
                 }
                 const { error: retrySignInError } = await supabase.auth.signInWithPassword({ email, password });
                 if (retrySignInError) {
