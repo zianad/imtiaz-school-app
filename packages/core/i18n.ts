@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from './types';
 
@@ -166,9 +167,10 @@ const translations = {
     paymentCompleted: "تم الأداء",
     pay: "أداء",
     setMonthlyFee: 'تحديد الواجب الشهري',
+    // FIX: Added missing translation key for monthly fee screens.
+    monthlyFee: 'الواجب الشهري',
     monthlyFeeAmountLabel: 'قيمة الواجب الشهري (درهم)',
     transportation: 'النقل',
-    monthlyFee: 'الواجب الشهري',
     totalAmount: 'المبلغ الإجمالي',
     setTransportationFee: 'تحديد رسوم النقل',
     transportationFeeAmountLabel: 'قيمة رسوم النقل (درهم)',
@@ -314,6 +316,9 @@ const translations = {
     teacherManageProjects_feature: 'خاصية: إدارة مشاريع الوحدة',
     teacherManageLibrary_feature: 'خاصية: إدارة المكتبة الرقمية',
     teacherManageAlbum_feature: 'خاصية: إدارة ألبوم الفصل',
+    teacherManageTalkingCards_feature: 'خاصية: إدارة البطاقات الناطقة',
+    // FIX: Corrected duplicate key by updating value and removing later re-definition.
+    teacherManageMemorization_feature: 'خاصية: مساعد الحفظ للأستاذ',
     teacherViewAnnouncements_feature: 'خاصية: عرض الإعلانات للأساتذة',
     guardianViewSummaries_feature: 'خاصية: عرض الملخصات',
     guardianViewExercises_feature: 'خاصية: عرض التمارين',
@@ -331,11 +336,12 @@ const translations = {
     guardianPayFees_feature: 'خاصية: أداء الواجبات الشهرية',
     guardianSubmitComplaints_feature: 'خاصية: تقديم الشكاوى والاقتراحات',
     guardianRequestInterview_feature: 'خاصية: طلب مقابلة',
+    guardianViewTalkingCards_feature: 'خاصية: عرض البطاقات الناطقة',
+    // FIX: Corrected duplicate key by updating value and removing later re-definition.
+    guardianViewMemorization_feature: 'خاصية: مساعد الحفظ للتلميذ',
 
     // Talking Cards Feature
     talkingCards: "البطاقات الناطقة",
-    teacherManageTalkingCards_feature: "خاصية: إدارة البطاقات الناطقة",
-    guardianViewTalkingCards_feature: "خاصية: عرض البطاقات الناطقة",
     addTalkingCard: "إضافة بطاقة ناطقة",
     analyzeWithAI: "تحليل الصورة بالذكاء الاصطناعي",
     analyzing: "جاري التحليل...",
@@ -349,8 +355,6 @@ const translations = {
 
     // Memorization Helper
     memorizationHelper: "مساعد الحفظ",
-    teacherManageMemorization_feature: "خاصية: مساعد الحفظ للأستاذ",
-    guardianViewMemorization_feature: "خاصية: مساعد الحفظ للتلميذ",
     addMemorizationItem: "إضافة مادة للحفظ",
     memorizationItemTitle: "عنوان المادة (مثال: سورة الفاتحة)",
     addByText: "إضافة نص",
@@ -457,6 +461,10 @@ const translations = {
     failedToDeletePrincipal: "فشل في حذف المدير",
     supabaseEmailConfirmationError: "فشل الدخول: خاصية تأكيد البريد الإلكتروني مفعلة.\n\n**لحل المشكلة:**\n1. اذهب إلى لوحة تحكم Supabase.\n2. اختر 'Authentication' ثم 'Settings'.\n3. قم بتعطيل خيار 'Confirm email'.\n4. اذهب إلى 'Users'، واحذف هذا المستخدم.\n5. حاول تسجيل الدخول مرة أخرى.",
     supabaseSignupsDisabledError: "فشل الدخول: تسجيل المستخدمين الجدد معطل.\n\n**لحل المشكلة:**\n1. اذهب إلى لوحة تحكم Supabase.\n2. اختر 'Authentication' ثم 'Settings'.\n3. قم **بتفعيل** خيار 'Allow new users to sign up'.\n4. حاول تسجيل الدخول مرة أخرى.",
+    rlsNoticeTitle: "إعداد أمان هام: خطأ 'رمز غير صحيح'",
+    rlsNoticeBody1: "للسماح للمستخدمين الجدد (مديرين، أساتذة، أولياء أمور) بتسجيل الدخول لأول مرة، يجب إضافة سياسة أمان (RLS) تسمح بالوصول للقراءة العلنية (anonymous read access).",
+    rlsNoticeBody2: "بدون هذه السياسة، لن يتمكن التطبيق من العثور على رموز الدخول الجديدة، مما يؤدي إلى ظهور خطأ 'رمز غير صحيح' بشكل دائم.",
+    rlsNoticeBody3: "الرجاء الذهاب إلى <strong>Database -&gt; Policies</strong> في Supabase وإضافة سياسة جديدة لكل من جداول <code>principals</code>, <code>teachers</code>, <code>students</code> تسمح بعملية <strong>SELECT</strong> للدور <strong>anon</strong>.",
   },
   fr: {
     discoverPleasureOfLearning: "Découvrez le plaisir d'apprendre",
@@ -622,6 +630,8 @@ const translations = {
     paymentCompleted: "Payé",
     pay: "Payer",
     setMonthlyFee: 'Définir les frais mensuels',
+    // FIX: Added missing translation key for monthly fee screens.
+    monthlyFee: 'Frais mensuels',
     monthlyFeeAmountLabel: 'Montant des frais mensuels (DH)',
     transportation: 'Transport',
     totalAmount: 'Montant total',
@@ -752,6 +762,9 @@ const translations = {
     teacherManageProjects_feature: 'Gérer projets d\'unité',
     teacherManageLibrary_feature: 'Gérer bibliothèque',
     teacherManageAlbum_feature: 'Gérer l\'album de classe',
+    // FIX: Added missing feature keys and consolidated definitions.
+    teacherManageTalkingCards_feature: "Gérer les cartes parlantes",
+    teacherManageMemorization_feature: "Assistant de mémorisation (Ens.)",
     teacherViewAnnouncements_feature: 'Voir les annonces',
     guardianViewSummaries_feature: 'Voir les résumés',
     guardianViewExercises_feature: 'Voir les exercices',
@@ -769,9 +782,10 @@ const translations = {
     guardianPayFees_feature: 'Payer les frais',
     guardianSubmitComplaints_feature: 'Envoyer réclamations',
     guardianRequestInterview_feature: 'Demander un entretien',
-    talkingCards: "Cartes parlantes",
-    teacherManageTalkingCards_feature: "Gérer les cartes parlantes",
+    // FIX: Added missing feature keys and consolidated definitions.
     guardianViewTalkingCards_feature: "Voir les cartes parlantes",
+    guardianViewMemorization_feature: "Assistant de mémorisation (Élève)",
+    talkingCards: "Cartes parlantes",
     addTalkingCard: "Ajouter une carte parlante",
     analyzeWithAI: "Analyser avec l'IA",
     analyzing: "Analyse en cours...",
@@ -783,8 +797,6 @@ const translations = {
     noTalkingCards: "Aucune carte parlante.",
     notificationNewTalkingCard: "Une nouvelle carte parlante a été ajoutée.",
     memorizationHelper: "Assistant de mémorisation",
-    teacherManageMemorization_feature: "Assistant de mémorisation (Ens.)",
-    guardianViewMemorization_feature: "Assistant de mémorisation (Élève)",
     addMemorizationItem: "Ajouter un élément",
     memorizationItemTitle: "Titre (ex: Sourate Al-Fatiha)",
     addByText: "Texte",
@@ -885,6 +897,10 @@ const translations = {
     failedToDeletePrincipal: "Échec de la suppression du directeur",
     supabaseEmailConfirmationError: "Connexion échouée : La confirmation par e-mail est activée.\n\n**Pour corriger :**\n1. Allez sur votre tableau de bord Supabase.\n2. Allez à 'Authentication' puis 'Settings'.\n3. Désactivez l'option 'Confirm email'.\n4. Allez à 'Users', et supprimez cet utilisateur.\n5. Réessayez de vous connecter.",
     supabaseSignupsDisabledError: "Connexion échouée : L'inscription de nouveaux utilisateurs est désactivée.\n\n**Pour corriger :**\n1. Allez sur votre tableau de bord Supabase.\n2. Allez à 'Authentication' puis 'Settings'.\n3. **Activez** l'option 'Allow new users to sign up'.\n4. Réessayez de vous connecter.",
+    rlsNoticeTitle: "Important Security Setting: 'Invalid Code' Error",
+    rlsNoticeBody1: "To allow new users (principals, teachers, guardians) to log in for the first time, a Row Level Security (RLS) policy must be added to allow anonymous read access.",
+    rlsNoticeBody2: "Without this policy, the app cannot find new login codes, causing the 'Invalid Code' error to appear permanently.",
+    rlsNoticeBody3: "Please go to <strong>Database -&gt; Policies</strong> in Supabase and add a new policy for each of the tables <code>principals</code>, <code>teachers</code>, and <code>students</code> that allows the <strong>SELECT</strong> operation for the <strong>anon</strong> role.",
   },
   en: {
     // ...

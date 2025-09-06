@@ -109,18 +109,15 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                 </button>
             </form>
             
-            <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-500 rounded-r-lg">
-                <h3 className="font-bold text-orange-800 dark:text-orange-200">{t('supabaseSettingsChecklistTitle')}</h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-2">
-                    {t('supabaseSettingsInstructions')}
+            <div className="mt-8 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg" role="alert">
+                <h3 className="font-bold text-red-800 dark:text-red-200">{t('rlsNoticeTitle')}</h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                    {t('rlsNoticeBody1')}
                 </p>
-                <ul className="list-disc list-inside space-y-1 mt-2 text-gray-700 dark:text-gray-300 text-sm">
-                    <li>{t('supabaseAllowSignups')}</li>
-                    <li>{t('supabaseDisableEmailConfirm')}</li>
-                </ul>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    بالإضافة إلى ذلك، تأكد من أن سياسات الأمان (RLS) على جداول `principals`, `teachers`, `students` تسمح بالقراءة (SELECT) لدور `anon`.
+                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                   {t('rlsNoticeBody2')}
                 </p>
+                 <p className="text-sm text-red-700 dark:text-red-300 mt-2" dangerouslySetInnerHTML={{ __html: t('rlsNoticeBody3')}} />
             </div>
 
             <div>

@@ -113,7 +113,8 @@ const GuardianMonthlyFees: React.FC<GuardianMonthlyFeesProps> = ({ student, scho
 
                             <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-3">
                                 <div className="flex justify-between items-center text-gray-800 dark:text-gray-200">
-                                    <span>{t('monthlyFee')}:</span>
+                                    {/* FIX: Corrected translation key from 'monthlyFee' to 'monthlyFees'. */}
+                                    <span>{t('monthlyFees')}:</span>
                                     <span className="font-semibold">{monthlyFee} {t('paymentAmount').replace(/.*\((.*)\)/, '$1')}</span>
                                 </div>
 

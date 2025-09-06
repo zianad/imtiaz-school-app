@@ -49,7 +49,8 @@ const PrincipalFeeManagement: React.FC<PrincipalFeeManagementProps> = ({ school,
 
             <div className="space-y-6">
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner">
-                    <label htmlFor="monthly-fee" className="block text-lg font-semibold text-gray-700 dark:text-gray-300 text-center mb-2">{t('monthlyFee')}</label>
+                    {/* FIX: Corrected translation key from 'monthlyFee' to 'monthlyFees'. */}
+                    <label htmlFor="monthly-fee" className="block text-lg font-semibold text-gray-700 dark:text-gray-300 text-center mb-2">{t('monthlyFees')}</label>
                     <input
                         id="monthly-fee"
                         type="number"
