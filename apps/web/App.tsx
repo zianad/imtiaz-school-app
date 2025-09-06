@@ -279,7 +279,15 @@ const App: React.FC = () => {
         for (const table of tables) {
             const codeColumn = table === 'students' ? 'guardian_code' : 'login_code';
             const { data, error } = await supabase.from(table).select('*, school_id').eq(codeColumn, code).limit(1).maybeSingle();
-            if (error) console.error(`Error searching in ${table}`, error);
+            
+            if (error) {
+                console.error(`Error searching in ${table}`, error);
+                // If RLS is enabled and there's no policy for anon, Supabase throws a permission error.
+                if (error.message.includes('permission denied')) {
+                    throw new Error('RLS_MISSING_POLICY_ERROR');
+                }
+            }
+
             if (data) {
                 userMatch = { 
                     user: data, 

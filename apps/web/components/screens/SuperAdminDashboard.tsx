@@ -61,6 +61,17 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                 <LanguageSwitcher />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6">{t('superAdminDashboardTitle')}</h1>
+            
+            <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg" role="alert">
+                <h3 className="font-bold text-red-800 dark:text-red-200">{t('rlsNoticeTitle')}</h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                    {t('rlsNoticeBody1')}
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                   {t('rlsNoticeBody2')}
+                </p>
+                 <p className="text-sm text-red-700 dark:text-red-300 mt-2" dangerouslySetInnerHTML={{ __html: t('rlsNoticeBody3')}} />
+            </div>
 
             <div className="mb-6">
                 <button
@@ -108,17 +119,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                     {t('addSchool')}
                 </button>
             </form>
-            
-            <div className="mt-8 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg" role="alert">
-                <h3 className="font-bold text-red-800 dark:text-red-200">{t('rlsNoticeTitle')}</h3>
-                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                    {t('rlsNoticeBody1')}
-                </p>
-                <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                   {t('rlsNoticeBody2')}
-                </p>
-                 <p className="text-sm text-red-700 dark:text-red-300 mt-2" dangerouslySetInnerHTML={{ __html: t('rlsNoticeBody3')}} />
-            </div>
 
             <div>
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center border-t dark:border-gray-600 pt-4 mt-8">{t('currentSchools')}</h2>

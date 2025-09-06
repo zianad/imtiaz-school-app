@@ -110,7 +110,9 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
             }
         } catch (err: any) {
             setStatus('incorrect');
-            if (err.message === 'SUPABASE_EMAIL_CONFIRMATION_ERROR') {
+            if (err.message === 'RLS_MISSING_POLICY_ERROR') {
+                setError(t('rlsLoginError'));
+            } else if (err.message === 'SUPABASE_EMAIL_CONFIRMATION_ERROR') {
                 setError(t('supabaseEmailConfirmationError'));
             } else if (err.message === 'SUPABASE_SIGNUPS_DISABLED_ERROR') {
                 setError(t('supabaseSignupsDisabledError'));
@@ -156,7 +158,7 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                     disabled={status === 'checking' || status === 'correct'}
                 />
                 <div className="flex items-center justify-center">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center">
                         <input
                             id="remember-me"
                             name="rememberMe"
@@ -165,8 +167,8 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                             onChange={(e) => setRememberMe(e.target.checked)}
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                         />
-                         <label htmlFor="remember-me">{t('rememberMe')}</label>
-                    </label>
+                         <label htmlFor="remember-me" className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300 cursor-pointer">{t('rememberMe')}</label>
+                    </div>
                 </div>
                 <button
                     type="submit"
@@ -176,9 +178,7 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                     {status === 'checking' || status === 'correct' ? '...' : t('login')}
                 </button>
                 {status === 'incorrect' && error && (
-                    <div className="text-red-500 dark:text-red-400 text-sm mt-2 text-right bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                        {error.split('\n').map((line, index) => <p key={index} className="[&:has(strong)]:font-semibold">{line.replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')}</p>)}
-                    </div>
+                    <div className="text-red-500 dark:text-red-400 text-sm mt-2 text-right bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800" dangerouslySetInnerHTML={{ __html: error }} />
                 )}
             </form>
 
