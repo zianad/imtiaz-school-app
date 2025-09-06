@@ -78,33 +78,6 @@ import SearchHeader from './components/common/SearchHeader';
 import SearchResultModal from './components/common/SearchResultModal';
 import ConfirmationModal from './components/common/ConfirmationModal';
 
-const flattenAndProcessSchoolData = (schoolData: any) => {
-    const students = schoolData.students || [];
-    const flattenedData = {
-        ...schoolData,
-        summaries: students.flatMap((s: any) => s.summaries || []),
-        exercises: students.flatMap((s: any) => s.exercises || []),
-        notes: students.flatMap((s: any) => s.notes || []),
-        absences: students.flatMap((s: any) => s.absences || []),
-        examPrograms: students.flatMap((s: any) => s.exam_programs || []),
-        notifications: students.flatMap((s: any) => s.notifications || []),
-        complaints: students.flatMap((s: any) => s.complaints || []),
-        monthlyFeePayments: students.flatMap((s: any) => s.monthly_fee_payments || []),
-        interviewRequests: students.flatMap((s: any) => s.interview_requests || []),
-        personalizedExercises: students.flatMap((s: any) => s.personalized_exercises || []),
-        supplementaryLessons: students.flatMap((s: any) => s.supplementary_lessons || []),
-        timetables: students.flatMap((s: any) => s.timetables || []),
-        quizzes: students.flatMap((s: any) => s.quizzes || []),
-        projects: students.flatMap((s: any) => s.projects || []),
-        libraryItems: students.flatMap((s: any) => s.library_items || []),
-        albumPhotos: students.flatMap((s: any) => s.album_photos || []),
-        unifiedAssessments: students.flatMap((s: any) => s.unified_assessments || []),
-        talkingCards: students.flatMap((s: any) => s.talking_cards || []),
-        memorizationItems: students.flatMap((s: any) => s.memorization_items || []),
-    };
-    return snakeToCamelCase(flattenedData);
-};
-
 
 const App: React.FC = () => {
     const { t } = useTranslation();
@@ -202,27 +175,26 @@ const App: React.FC = () => {
                 educational_tips(*),
                 expenses(*),
                 feedback(*),
-                students(*,
-                    summaries(*),
-                    exercises(*),
-                    notes(*),
-                    absences(*),
-                    exam_programs(*),
-                    notifications(*),
-                    complaints(*),
-                    monthly_fee_payments(*),
-                    interview_requests(*),
-                    personalized_exercises(*),
-                    supplementary_lessons(*),
-                    timetables(*),
-                    quizzes(*),
-                    projects(*),
-                    library_items(*),
-                    album_photos(*),
-                    unified_assessments(*),
-                    talking_cards(*),
-                    memorization_items(*)
-                )
+                students(*),
+                summaries(*),
+                exercises(*),
+                notes(*),
+                absences(*),
+                exam_programs(*),
+                notifications(*),
+                complaints(*),
+                monthly_fee_payments(*),
+                interview_requests(*),
+                personalized_exercises(*),
+                supplementary_lessons(*),
+                timetables(*),
+                quizzes(*),
+                projects(*),
+                library_items(*),
+                album_photos(*),
+                unified_assessments(*),
+                talking_cards(*),
+                memorization_items(*)
             `)
             .eq('id', schoolId)
             .single();
@@ -236,7 +208,7 @@ const App: React.FC = () => {
         }
 
         if (data) {
-            return flattenAndProcessSchoolData(data);
+            return snakeToCamelCase(data);
         }
         return null;
     }, []);
