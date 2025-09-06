@@ -242,11 +242,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return String(translation); // Ensure it's always a string
   };
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
-  );
+  return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t } }, children);
 };
 
 export const useTranslation = (): TranslationContextType => {
