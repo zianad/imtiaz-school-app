@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature } from '../../packages/core/types';
+import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, MOCK_SCHOOLS, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
+import { GoogleGenAI } from '@google/genai';
 
 // Screen Imports
 import UnifiedLoginScreen from './components/screens/UnifiedLoginScreen';
@@ -663,7 +664,7 @@ const App: React.FC = () => {
         case Page.Maintenance:
             return <MaintenanceScreen onLogout={handleLogout} />;
         default:
-            return <div>Page not found</div>;
+            return <div className="text-center"><p className="text-2xl font-bold dark:text-white">Page not found</p></div>;
     }
   };
 

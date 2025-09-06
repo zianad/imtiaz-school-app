@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from './types';
 
@@ -167,8 +166,6 @@ const translations = {
     paymentCompleted: "تم الأداء",
     pay: "أداء",
     setMonthlyFee: 'تحديد الواجب الشهري',
-    // FIX: Added missing translation key for monthly fee screens.
-    monthlyFee: 'الواجب الشهري',
     monthlyFeeAmountLabel: 'قيمة الواجب الشهري (درهم)',
     transportation: 'النقل',
     totalAmount: 'المبلغ الإجمالي',
@@ -317,7 +314,6 @@ const translations = {
     teacherManageLibrary_feature: 'خاصية: إدارة المكتبة الرقمية',
     teacherManageAlbum_feature: 'خاصية: إدارة ألبوم الفصل',
     teacherManageTalkingCards_feature: 'خاصية: إدارة البطاقات الناطقة',
-    // FIX: Corrected duplicate key by updating value and removing later re-definition.
     teacherManageMemorization_feature: 'خاصية: مساعد الحفظ للأستاذ',
     teacherViewAnnouncements_feature: 'خاصية: عرض الإعلانات للأساتذة',
     guardianViewSummaries_feature: 'خاصية: عرض الملخصات',
@@ -337,7 +333,6 @@ const translations = {
     guardianSubmitComplaints_feature: 'خاصية: تقديم الشكاوى والاقتراحات',
     guardianRequestInterview_feature: 'خاصية: طلب مقابلة',
     guardianViewTalkingCards_feature: 'خاصية: عرض البطاقات الناطقة',
-    // FIX: Corrected duplicate key by updating value and removing later re-definition.
     guardianViewMemorization_feature: 'خاصية: مساعد الحفظ للتلميذ',
 
     // Talking Cards Feature
@@ -451,8 +446,6 @@ const translations = {
     supabaseDisableEmailConfirm: "تعطيل خيار 'Confirm email'",
     supabaseEmailConfirmationNoteTitle: "ملاحظة هامة بخصوص إضافة المستخدمين",
     supabaseEmailConfirmationNoteBody: "لإضافة مستخدمين جدد (مديرين، أساتذة، أولياء أمور)، يجب التأكد من تعطيل خيار 'Confirm email'. هذا الإجراء ضروري لتمكين الدخول باستخدام الرموز السرية مباشرة.",
-
-    // FIX: Added keys for better error handling
     principalCodeExists: "هذا الرمز السري مستخدم بالفعل. الرجاء اختيار رمز آخر.",
     failedToAddPrincipal: "فشل في إضافة المدير",
     failedToUpdateCode: "فشل في تحديث الرمز",
@@ -630,8 +623,6 @@ const translations = {
     paymentCompleted: "Payé",
     pay: "Payer",
     setMonthlyFee: 'Définir les frais mensuels',
-    // FIX: Added missing translation key for monthly fee screens.
-    monthlyFee: 'Frais mensuels',
     monthlyFeeAmountLabel: 'Montant des frais mensuels (DH)',
     transportation: 'Transport',
     totalAmount: 'Montant total',
@@ -762,7 +753,6 @@ const translations = {
     teacherManageProjects_feature: 'Gérer projets d\'unité',
     teacherManageLibrary_feature: 'Gérer bibliothèque',
     teacherManageAlbum_feature: 'Gérer l\'album de classe',
-    // FIX: Added missing feature keys and consolidated definitions.
     teacherManageTalkingCards_feature: "Gérer les cartes parlantes",
     teacherManageMemorization_feature: "Assistant de mémorisation (Ens.)",
     teacherViewAnnouncements_feature: 'Voir les annonces',
@@ -782,7 +772,6 @@ const translations = {
     guardianPayFees_feature: 'Payer les frais',
     guardianSubmitComplaints_feature: 'Envoyer réclamations',
     guardianRequestInterview_feature: 'Demander un entretien',
-    // FIX: Added missing feature keys and consolidated definitions.
     guardianViewTalkingCards_feature: "Voir les cartes parlantes",
     guardianViewMemorization_feature: "Assistant de mémorisation (Élève)",
     talkingCards: "Cartes parlantes",
@@ -888,7 +877,6 @@ const translations = {
     supabaseEmailConfirmationNoteTitle: "Note importante sur l'ajout d'utilisateurs",
     supabaseEmailConfirmationNoteBody: "Pour ajouter de nouveaux utilisateurs (directeurs, enseignants, parents), vous devez désactiver l'option 'Confirm email'. Ceci est nécessaire pour permettre la connexion directe avec les codes secrets.",
     
-    // FIX: Added keys for better error handling
     principalCodeExists: "Ce code secret est déjà utilisé. Veuillez en choisir un autre.",
     failedToAddPrincipal: "Échec de l'ajout du directeur",
     failedToUpdateCode: "Échec de la mise à jour du code",
@@ -949,7 +937,6 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({ childr
     return translation;
   }, [language]);
 
-  // FIX: Rewritten to use React.createElement to avoid JSX syntax in a .ts file.
   return React.createElement(
     LanguageContext.Provider,
     { value: { language, setLanguage, t } },
