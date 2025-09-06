@@ -4,7 +4,6 @@ export type Language = 'ar' | 'fr' | 'en';
 
 export enum Page {
   UnifiedLogin,
-  // FIX: Add Maintenance page for inactive schools.
   Maintenance,
 
   // Super Admin
@@ -371,35 +370,36 @@ export interface School {
     [key in EducationalStage]?: Principal[];
   };
   isActive: boolean;
-  stages: EducationalStage[]; // Which stages are active for this school
+  stages: EducationalStage[]; 
   featureFlags: SchoolFeatureFlags;
   monthlyFeeAmount?: number;
   transportationFee?: number;
-  students: Student[];
-  teachers: Teacher[];
-  summaries: Summary[];
-  exercises: Exercise[];
-  notes: Note[];
-  absences: Absence[];
-  examPrograms: ExamProgram[];
-  notifications: Notification[];
-  announcements: Announcement[];
-  complaints: Complaint[];
-  educationalTips: EducationalTip[];
-  monthlyFeePayments: MonthlyFeePayment[];
-  interviewRequests: InterviewRequest[];
-  supplementaryLessons: SupplementaryLesson[];
-  timetables: Timetable[];
-  quizzes: Quiz[];
-  projects: Project[];
-  libraryItems: LibraryItem[];
-  albumPhotos: AlbumPhoto[]; 
-  personalizedExercises: PersonalizedExercise[]; 
-  unifiedAssessments: UnifiedAssessment[];
-  talkingCards: TalkingCard[];
-  memorizationItems: MemorizationItem[];
-  expenses: Expense[];
-  feedback: Feedback[];
+  // Make data arrays optional for lazy loading
+  students?: Student[];
+  teachers?: Teacher[];
+  summaries?: Summary[];
+  exercises?: Exercise[];
+  notes?: Note[];
+  absences?: Absence[];
+  examPrograms?: ExamProgram[];
+  notifications?: Notification[];
+  announcements?: Announcement[];
+  complaints?: Complaint[];
+  educationalTips?: EducationalTip[];
+  monthlyFeePayments?: MonthlyFeePayment[];
+  interviewRequests?: InterviewRequest[];
+  supplementaryLessons?: SupplementaryLesson[];
+  timetables?: Timetable[];
+  quizzes?: Quiz[];
+  projects?: Project[];
+  libraryItems?: LibraryItem[];
+  albumPhotos?: AlbumPhoto[]; 
+  personalizedExercises?: PersonalizedExercise[]; 
+  unifiedAssessments?: UnifiedAssessment[];
+  talkingCards?: TalkingCard[];
+  memorizationItems?: MemorizationItem[];
+  expenses?: Expense[];
+  feedback?: Feedback[];
 }
 
 export interface Summary extends BaseContent {

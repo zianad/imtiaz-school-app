@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+// FIX: Refactored component to fetch and manage its own data, aligning with the pattern used in PrincipalManageStudents.
+// This removes the need to pass data and handlers down from the main App component, making it more self-contained.
+import React, { useState, useEffect, useCallback } from 'react';
 import { Teacher, School, EducationalStage, Subject } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
-import { getStageForLevel } from '../../../../packages/core/utils';
+import { getStageForLevel, snakeToCamelCase, camelToSnakeCase } from '../../../../packages/core/utils';
 import BackButton from '../common/BackButton';
 import LogoutButton from '../common/LogoutButton';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import ThemeSwitcher from '../common/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
 
 interface PrincipalManageTeachersProps {
     school: School;
     stage: EducationalStage;
-    teachers: Teacher[];
-    onAddTeacher: (teacher: Omit<Teacher, 'id'>) => void;
-    onUpdateTeacher: (teacher: Teacher) => void;
-    onDeleteTeacher: (teacherId: string, teacherName: string) => void;
     onBack: () => void;
     onLogout: () => void;
     toggleDarkMode: () => void;
@@ -25,7 +24,7 @@ interface PrincipalManageTeachersProps {
 const TeacherForm: React.FC<{
     stage: EducationalStage,
     editingTeacher: Teacher | null,
-    onSave: (data: Omit<Teacher, 'id'>) => void,
+    onSave: (data: Teacher | Omit<Teacher, 'id'>) => void,
     onCancel: () => void
 }> = ({ stage, editingTeacher, onSave, onCancel }) => {
     const { t } = useTranslation();
@@ -72,7 +71,12 @@ const TeacherForm: React.FC<{
         e.preventDefault();
         const hasAssignments = Object.values(assignments).some(classes => classes.length > 0);
         if (name.trim() && loginCode.trim() && selectedSubjects.length > 0 && hasAssignments) {
-            onSave({ name, loginCode, subjects: selectedSubjects, assignments, salary });
+            const teacherData = { name, loginCode, subjects: selectedSubjects, assignments, salary };
+            if (editingTeacher) {
+                onSave({ ...editingTeacher, ...teacherData });
+            } else {
+                onSave(teacherData);
+            }
             onCancel(); // Close modal on save
         } else {
             alert(t('fillAllFields'));
@@ -120,14 +124,65 @@ const TeacherForm: React.FC<{
 };
 
 
-const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ school, stage, teachers = [], onAddTeacher, onUpdateTeacher, onDeleteTeacher, onBack, onLogout, toggleDarkMode, isDarkMode, isDesktop = false }) => {
+const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ school, stage, onBack, onLogout, toggleDarkMode, isDarkMode, isDesktop = false }) => {
     const { t } = useTranslation();
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const handleSave = (teacherData: Omit<Teacher, 'id'>) => {
-        if (editingTeacher) {
-            onUpdateTeacher({ ...editingTeacher, ...teacherData });
+    const fetchTeachers = useCallback(async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('teachers')
+            .select('*')
+            .eq('school_id', school.id);
+        
+        if (error) {
+            console.error("Error fetching teachers:", error);
+            setTeachers([]);
+        } else {
+            setTeachers(snakeToCamelCase(data) as Teacher[]);
+        }
+        setIsLoading(false);
+    }, [school.id]);
+
+    useEffect(() => {
+        fetchTeachers();
+    }, [fetchTeachers]);
+
+    const onAddTeacher = async (teacher: Omit<Teacher, 'id'>) => {
+        const { error } = await supabase.from('teachers').insert([camelToSnakeCase({ ...teacher, school_id: school.id })]);
+        if (error) {
+            console.error("Error adding teacher", error);
+        } else {
+            await fetchTeachers();
+        }
+    };
+
+    const onUpdateTeacher = async (teacher: Teacher) => {
+        const { error } = await supabase.from('teachers').update(camelToSnakeCase(teacher)).eq('id', teacher.id);
+        if (error) {
+            console.error("Error updating teacher", error);
+        } else {
+            await fetchTeachers();
+        }
+    };
+
+    const onDeleteTeacher = async (teacherId: string, teacherName: string) => {
+        if (window.confirm(t('confirmDeleteTeacher', { name: teacherName }))) {
+            const { error } = await supabase.from('teachers').delete().eq('id', teacherId);
+            if (error) {
+                console.error("Error deleting teacher", error);
+            } else {
+                await fetchTeachers();
+            }
+        }
+    };
+
+    const handleSave = (teacherData: Teacher | Omit<Teacher, 'id'>) => {
+        if ('id' in teacherData) {
+            onUpdateTeacher(teacherData as Teacher);
         } else {
             onAddTeacher(teacherData);
         }
@@ -156,7 +211,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
             <div>
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-3 text-center border-t dark:border-gray-600 pt-4">{t('existingTeachers')}</h2>
                 <div className="max-h-96 overflow-y-auto space-y-3 p-2">
-                     {teachersForStage.length > 0 ? teachersForStage.map(teacher => (
+                     {isLoading ? <p className="text-center">Loading...</p> : teachersForStage.length > 0 ? teachersForStage.map(teacher => (
                         <div key={teacher.id} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm">
                              <div className="flex justify-between items-center">
                                 <p className="font-semibold text-gray-800 dark:text-gray-200">{teacher.name}</p>

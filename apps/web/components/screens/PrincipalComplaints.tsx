@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Complaint, Student, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
@@ -6,24 +6,51 @@ import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ReactMarkdown from 'react-markdown';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
+import { snakeToCamelCase } from '../../../../packages/core/utils';
 
 interface PrincipalComplaintsProps {
     school: School;
-    complaints: Complaint[];
-    students: Student[];
     onAnalyze: () => Promise<string>;
     onBack: () => void;
     onLogout: () => void;
-    isDesktop?: boolean;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
 }
 
-const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, complaints, students, onAnalyze, onBack, onLogout, isDesktop = false, toggleDarkMode, isDarkMode }) => {
+const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onAnalyze, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     const [analysis, setAnalysis] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [complaints, setComplaints] = useState<Complaint[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [isDataLoading, setIsDataLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchComplaintsData = async () => {
+            setIsDataLoading(true);
+            const { data: complaintsData, error: complaintsError } = await supabase
+                .from('complaints')
+                .select('*')
+                .eq('school_id', school.id)
+                .order('date', { ascending: false });
+
+            if (complaintsError) console.error("Error fetching complaints", complaintsError);
+            else setComplaints(snakeToCamelCase(complaintsData) as Complaint[]);
+
+            const { data: studentsData, error: studentsError } = await supabase
+                .from('students')
+                .select('id, name')
+                .eq('school_id', school.id);
+
+            if (studentsError) console.error("Error fetching students for complaints", studentsError);
+            else setStudents(snakeToCamelCase(studentsData) as Student[]);
+
+            setIsDataLoading(false);
+        };
+        fetchComplaintsData();
+    }, [school.id]);
     
     const getStudentName = (studentId: string) => {
         return students.find(s => s.id === studentId)?.name || 'Unknown Student';
@@ -42,7 +69,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
             setIsLoading(false);
         }
     };
-
+    
     const renderModal = () => (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
@@ -85,7 +112,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
             <div className="mb-6">
                 <button 
                     onClick={handleAnalyze} 
-                    disabled={complaints.length < 2}
+                    disabled={complaints.length < 2 || isLoading}
                     className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                     🧠 {t('analyzeComplaints')}
@@ -94,7 +121,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, compl
 
             <div className="max-h-[60vh] overflow-y-auto space-y-4 p-2">
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('receivedComplaints')}</h2>
-                {complaints.length > 0 ? complaints.map(c => (
+                {isDataLoading ? <p className="text-center dark:text-gray-300">Loading...</p> : complaints.length > 0 ? complaints.map(c => (
                     <div key={c.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg shadow-sm border-l-4 border-orange-500 dark:border-orange-400">
                         <p className="whitespace-pre-wrap mb-2 text-gray-800 dark:text-gray-200">{c.content}</p>
                         {c.image && <img src={c.image} alt="attachment" className="mt-2 rounded-lg max-w-full h-auto"/>}
