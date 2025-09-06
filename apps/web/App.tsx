@@ -164,53 +164,85 @@ const App: React.FC = () => {
         if (!isSupabaseConfigured) {
             return MOCK_SCHOOLS.find(s => s.id === schoolId) || null;
         }
-
-        const { data, error } = await supabase
-            .from('schools')
-            .select(`
-                *,
-                principals(*),
-                teachers(*),
-                announcements(*),
-                educational_tips(*),
-                expenses(*),
-                feedback(*),
-                students(*),
-                summaries(*),
-                exercises(*),
-                notes(*),
-                absences(*),
-                exam_programs(*),
-                notifications(*),
-                complaints(*),
-                monthly_fee_payments(*),
-                interview_requests(*),
-                personalized_exercises(*),
-                supplementary_lessons(*),
-                timetables(*),
-                quizzes(*),
-                projects(*),
-                library_items(*),
-                album_photos(*),
-                unified_assessments(*),
-                talking_cards(*),
-                memorization_items(*)
-            `)
-            .eq('id', schoolId)
-            .single();
-
-        if (error) {
-            console.error('Error fetching school data:', error);
-            if (error.message.includes("permission denied")) {
+    
+        try {
+            // 1. Fetch the main school record
+            const { data: schoolData, error: schoolError } = await supabase
+                .from('schools')
+                .select('*')
+                .eq('id', schoolId)
+                .single();
+    
+            if (schoolError) {
+                console.error('Error fetching school record:', schoolError);
+                if (schoolError.message.includes("permission denied")) {
+                    throw new Error("RLS_MISSING_POLICY_ERROR");
+                }
+                throw schoolError;
+            }
+    
+            if (!schoolData) {
+                return null;
+            }
+    
+            // 2. Define all related tables to fetch
+            const relatedTables = [
+                'principals', 'teachers', 'students', 'announcements', 
+                'educational_tips', 'expenses', 'feedback', 'summaries', 
+                'exercises', 'notes', 'absences', 'exam_programs', 
+                'notifications', 'complaints', 'monthly_fee_payments', 
+                'interview_requests', 'personalized_exercises', 'supplementary_lessons',
+                'timetables', 'quizzes', 'projects', 'library_items',
+                'album_photos', 'unified_assessments', 'talking_cards', 'memorization_items'
+            ];
+    
+            // 3. Fetch all related data in parallel
+            const promises = relatedTables.map(table =>
+                supabase.from(table).select('*').eq('school_id', schoolId)
+            );
+    
+            const results = await Promise.all(promises);
+    
+            // 4. Check for errors in parallel fetches
+            for (let i = 0; i < results.length; i++) {
+                if (results[i].error) {
+                    console.error(`Error fetching ${relatedTables[i]}:`, results[i].error);
+                    throw results[i].error;
+                }
+            }
+            
+            // 5. Assemble the final School object
+            const assembledData: { [key: string]: any } = {};
+            relatedTables.forEach((table, index) => {
+                const camelKey = table.replace(/_([a-z])/g, g => g[1].toUpperCase());
+                assembledData[camelKey] = results[index].data || [];
+            });
+    
+            // Special handling for principals to group them by stage
+            const principalsList = (assembledData.principals || []) as Principal[];
+            const groupedPrincipals: { [key in EducationalStage]?: Principal[] } = {};
+            principalsList.forEach(p => {
+                if (!groupedPrincipals[p.stage]) {
+                    groupedPrincipals[p.stage] = [];
+                }
+                groupedPrincipals[p.stage]!.push(p);
+            });
+            assembledData.principals = groupedPrincipals;
+    
+            const finalSchoolObject = {
+                ...schoolData,
+                ...assembledData,
+            };
+    
+            return snakeToCamelCase(finalSchoolObject) as School;
+    
+        } catch (error) {
+            console.error('A critical error occurred in fetchSchoolData:', error);
+            if ((error as any).message?.includes("permission denied")) {
                 throw new Error("RLS_MISSING_POLICY_ERROR");
             }
             throw error;
         }
-
-        if (data) {
-            return snakeToCamelCase(data);
-        }
-        return null;
     }, []);
     
     const handleLogin = async (code: string) => {
