@@ -33,6 +33,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
     const [salary, setSalary] = useState<number | undefined>(undefined);
     const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
     const [assignments, setAssignments] = useState<{ [level: string]: string[] }>({});
+    const [openLevel, setOpenLevel] = useState<string | null>(null);
     
     const stageDetails = STAGE_DETAILS[stage];
 
@@ -63,6 +64,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
         setAssignments({});
         setEditingTeacher(null);
         setIsFormVisible(false);
+        setOpenLevel(null);
     };
 
     useEffect(() => {
@@ -120,11 +122,15 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
             };
 
             const { error } = editingTeacher
-                ? await supabase.from('teachers').update(teacherData).match({ id: editingTeacher.id })
-                : await supabase.from('teachers').insert(teacherData);
+                ? await supabase.from('teachers').update(camelToSnakeCase(teacherData)).match({ id: editingTeacher.id })
+                : await supabase.from('teachers').insert(camelToSnakeCase(teacherData));
 
             if (error) {
-                alert('Failed to save teacher: ' + error.message);
+                 if (error.message.includes('violates row-level security policy')) {
+                    alert(t('rlsInsertError'));
+                } else {
+                    alert('Failed to save teacher: ' + error.message);
+                }
             } else {
                 await fetchTeachers();
                 resetForm();
@@ -179,7 +185,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
                     <h2 className="text-xl font-semibold text-center text-gray-700 dark:text-gray-200">{editingTeacher ? t('edit') : t('addTeacher')}</h2>
                     <input type="text" placeholder={t('teacherName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded" />
                     <input type="text" placeholder={t('loginCode')} value={loginCode} onChange={e => setLoginCode(e.target.value)} required className="w-full p-2 border rounded" />
-                    <input type="number" placeholder="الراتب (اختياري)" value={salary || ''} onChange={e => setSalary(e.target.value ? Number(e.target.value) : undefined)} className="w-full p-2 border rounded" />
+                    <input type="number" placeholder={t('salaryOptional')} value={salary || ''} onChange={e => setSalary(e.target.value ? Number(e.target.value) : undefined)} className="w-full p-2 border rounded" />
 
                     <div className="p-2 border rounded">
                         <h3 className="text-center font-semibold mb-2">{t('subject')}</h3>
@@ -191,14 +197,28 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
                     <div className="p-2 border rounded max-h-60 overflow-y-auto">
                         <h3 className="text-center font-semibold mb-2">المستويات والأفواج</h3>
                         {stageDetails.levels.map(level => (
-                            <div key={level} className="mb-2">
-                                <label className="flex items-center gap-2">
-                                    <input type="checkbox" checked={!!assignments[level]} onChange={() => handleLevelToggle(level)} />
+                            <div key={level} className="mb-1 border-b dark:border-gray-600">
+                                <button type="button" onClick={() => setOpenLevel(openLevel === level ? null : level)} className="w-full text-right p-2 font-semibold flex justify-between items-center dark:text-gray-200">
                                     <span>{level}</span>
-                                </label>
-                                {assignments[level] && (
-                                    <div className="flex flex-wrap gap-2 mt-1 pl-6">
-                                        {CLASSES.map(cls => <button type="button" key={cls} onClick={() => handleClassToggle(level, cls)} className={`px-2 py-1 rounded-full text-xs ${assignments[level].includes(cls) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>{cls}</button>)}
+                                    <span className="text-xs">{openLevel === level ? '▲' : '▼'}</span>
+                                </button>
+                                {openLevel === level && (
+                                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-b-lg animate-fade-in">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <input
+                                                type="checkbox"
+                                                id={`level-check-${level}`}
+                                                checked={!!assignments[level]}
+                                                onChange={() => handleLevelToggle(level)}
+                                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor={`level-check-${level}`} className="dark:text-gray-300">إسناد هذا المستوى</label>
+                                        </div>
+                                        {assignments[level] && (
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {CLASSES.map(cls => <button type="button" key={cls} onClick={() => handleClassToggle(level, cls)} className={`px-2 py-1 rounded-full text-xs ${assignments[level].includes(cls) ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>{cls}</button>)}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

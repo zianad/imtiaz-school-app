@@ -51,6 +51,7 @@ const translations: { [key in Language]: Translations } = {
     rlsLoginError: "خطأ في تسجيل الدخول. يرجى التواصل مع الدعم الفني.",
     supabaseEmailConfirmationError: "خطأ: لم يتم تأكيد البريد الإلكتروني. يرجى التواصل مع الدعم الفني.",
     supabaseSignupsDisabledError: "خطأ: التسجيل معطل حاليا. تواصل مع الدعم الفني.",
+    rlsInsertError: "فشل الحفظ. يرجى التأكد من أن سياسات الأمان (RLS) في حسابك على Supabase تسمح للمدير بإضافة (INSERT) مستخدمين جدد في هذا الجدول.",
     
     // Maintenance Screen
     maintenanceTitle: 'تحت الصيانة',
@@ -107,6 +108,15 @@ const translations: { [key in Language]: Translations } = {
     financialManagement: 'الإدارة المالية',
     manageStudents: 'إدارة التلاميذ',
     manageTeachers: 'إدارة الأساتذة',
+    addStudent: 'إضافة تلميذ',
+    addTeacher: 'إضافة أستاذ',
+    teacherName: 'اسم الأستاذ',
+    studentName: 'اسم التلميذ',
+    guardianCode: 'رمز ولي الأمر',
+    loginCode: 'رمز الدخول',
+    noStudents: 'لا يوجد تلاميذ في هذا القسم.',
+    updateTeacher: 'تحديث الأستاذ',
+    salaryOptional: 'الراتب (اختياري)',
     
     // Teacher
     teacherDashboardTitle: 'لوحة تحكم الأستاذ',

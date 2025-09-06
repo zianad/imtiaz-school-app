@@ -85,10 +85,14 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
             grades,
         };
         
-        const { error } = await supabase.from('students').insert(newStudentData);
+        const { error } = await supabase.from('students').insert(camelToSnakeCase(newStudentData));
 
         if (error) {
-            alert('Failed to add student: ' + error.message);
+            if (error.message.includes('violates row-level security policy')) {
+                alert(t('rlsInsertError'));
+            } else {
+                alert('Failed to add student: ' + error.message);
+            }
         } else {
             await fetchStudents();
             resetForm();
