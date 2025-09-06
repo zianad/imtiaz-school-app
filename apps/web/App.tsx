@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent } from '../../packages/core/types';
+import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent, Absence } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, MOCK_SCHOOLS, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
@@ -135,35 +135,88 @@ const App: React.FC = () => {
     return camelSchool;
   }, []);
   
-  const SCHOOL_FULL_QUERY = `
-    *, 
-    students(*), 
-    teachers(*), 
-    principals(*),
-    notes(*),
-    announcements(*),
-    complaints(*),
-    educational_tips(*),
-    monthly_fee_payments(*),
-    interview_requests(*),
-    summaries(*),
-    exercises(*),
-    absences(*),
-    exam_programs(*),
-    notifications(*),
-    supplementary_lessons(*),
-    timetables(*),
-    quizzes(*),
-    projects(*),
-    library_items(*),
-    album_photos(*),
-    personalized_exercises(*),
-    unified_assessments(*),
-    talking_cards(*),
-    memorization_items(*),
-    expenses(*),
-    feedback(*)
-  `;
+    const flattenAndProcessSchoolData = (schoolData: any): School | null => {
+        if (!schoolData) return null;
+        
+        // First, process the basic structure (snake_case to camelCase)
+        const camelSchool = processSchoolData(schoolData);
+
+        // Now, flatten the nested arrays that were fetched via students
+        if (camelSchool && Array.isArray(camelSchool.students)) {
+            const nestedData = {
+                complaints: [] as Complaint[],
+                monthlyFeePayments: [] as MonthlyFeePayment[],
+                interviewRequests: [] as InterviewRequest[],
+                absences: [] as Absence[],
+                notifications: [] as Notification[],
+                personalizedExercises: [] as PersonalizedExercise[],
+            };
+
+            camelSchool.students.forEach((student: any) => {
+                if (student.complaints) {
+                    nestedData.complaints.push(...snakeToCamelCase(student.complaints));
+                    delete student.complaints;
+                }
+                if (student.monthlyFeePayments) {
+                    nestedData.monthlyFeePayments.push(...snakeToCamelCase(student.monthlyFeePayments));
+                    delete student.monthlyFeePayments;
+                }
+                if (student.interviewRequests) {
+                    nestedData.interviewRequests.push(...snakeToCamelCase(student.interviewRequests));
+                    delete student.interviewRequests;
+                }
+                if (student.absences) {
+                    nestedData.absences.push(...snakeToCamelCase(student.absences));
+                    delete student.absences;
+                }
+                if (student.notifications) {
+                    nestedData.notifications.push(...snakeToCamelCase(student.notifications));
+                    delete student.notifications;
+                }
+                if (student.personalizedExercises) {
+                    nestedData.personalizedExercises.push(...snakeToCamelCase(student.personalizedExercises));
+                    delete student.personalizedExercises;
+                }
+            });
+            
+            // Assign the flattened arrays to the school object
+            Object.assign(camelSchool, nestedData);
+        }
+        
+        return camelSchool;
+    };
+
+    const SCHOOL_FULL_QUERY = `
+        *, 
+        teachers(*), 
+        principals(*),
+        students(*, 
+            complaints(*), 
+            monthly_fee_payments(*),
+            interview_requests(*),
+            absences(*),
+            notifications(*),
+            personalized_exercises(*)
+        ),
+        notes(*),
+        announcements(*),
+        educational_tips(*),
+        summaries(*),
+        exercises(*),
+        exam_programs(*),
+        supplementary_lessons(*),
+        timetables(*),
+        quizzes(*),
+        projects(*),
+        library_items(*),
+        album_photos(*),
+        unified_assessments(*),
+        talking_cards(*),
+        memorization_items(*),
+        expenses(*),
+        feedback(*)
+    `;
+
 
   const refreshSchoolState = useCallback(async (schoolId: string) => {
     setIsLoading(true);
@@ -172,14 +225,14 @@ const App: React.FC = () => {
         console.error("Error refreshing school state:", refreshError);
         alert(`Error: ${refreshError.message}`);
     } else {
-        setSchool(processSchoolData(refreshedSchool));
+        setSchool(flattenAndProcessSchoolData(refreshedSchool));
     }
 
     const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
     if (allSchoolsError) throw allSchoolsError;
     setSchools(processSchoolData(allSchools));
     setIsLoading(false);
-  }, [processSchoolData, SCHOOL_FULL_QUERY]);
+  }, [processSchoolData, SCHOOL_FULL_QUERY, flattenAndProcessSchoolData]);
 
 
   useEffect(() => {
@@ -337,9 +390,9 @@ const App: React.FC = () => {
                 .single();
             if (schoolError) throw schoolError;
             
-            const fullSchoolData = processSchoolData(schoolData);
+            const fullSchoolData = flattenAndProcessSchoolData(schoolData);
 
-            if(!fullSchoolData.isActive) {
+            if(!fullSchoolData || !fullSchoolData.isActive) {
                 await supabase.auth.signOut();
                 setPage(Page.Maintenance);
                 return;
@@ -359,7 +412,7 @@ const App: React.FC = () => {
             throw new Error(t('invalidCode'));
         }
     }
-  }, [t, processSchoolData, SCHOOL_FULL_QUERY]);
+  }, [t, processSchoolData, SCHOOL_FULL_QUERY, flattenAndProcessSchoolData]);
   
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
