@@ -213,6 +213,35 @@ const App: React.FC = () => {
             setSchool(processedData);
         }
     }, []);
+    
+    const resetAppState = useCallback(() => {
+        setPage(Page.UnifiedLogin);
+        setUserRole(null);
+        setCurrentUser(null);
+        setSchool(null);
+        setSchools([]);
+        setSession(null);
+        setSelectedStage(null);
+        setSelectedLevel('');
+        setSelectedSubject(null);
+        setSelectedClass('');
+        setIsImpersonating(false);
+        setImpersonatedTeacher(null);
+        setSearchQuery('');
+        setSearchResults([]);
+        setSelectedSearchResult(null);
+    }, []);
+
+    const performLogout = useCallback(async () => {
+        if (isSupabaseConfigured) {
+            const { error } = await supabase.auth.signOut();
+            if (error) console.error("Error signing out:", error);
+        }
+        if (!isSupabaseConfigured) {
+            resetAppState();
+        }
+    }, [resetAppState]);
+
 
     const handleLogin = async (code: string) => {
         if (!isSupabaseConfigured) {
@@ -328,31 +357,6 @@ const App: React.FC = () => {
         }
     };
     
-     const handleLogout = async () => {
-        if (isSupabaseConfigured) {
-            await supabase.auth.signOut();
-        }
-        // Reset all state variables to their initial values
-        setPage(Page.UnifiedLogin);
-        setUserRole(null);
-        setCurrentUser(null);
-        setSchool(null);
-        setSchools([]);
-        setSession(null);
-        setSelectedStage(null);
-        setSelectedLevel('');
-        setSelectedSubject(null);
-        setSelectedClass('');
-        setIsImpersonating(false);
-        setImpersonatedTeacher(null);
-        setSearchQuery('');
-        setSearchResults([]);
-        setSelectedSearchResult(null);
-        
-        // Don't close feedback modal on logout, but maybe we should
-        // setIsFeedbackModalOpen(false);
-    };
-
      useEffect(() => {
         if (!isSupabaseConfigured) {
             setIsLoading(false);
@@ -361,31 +365,39 @@ const App: React.FC = () => {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setIsLoading(true);
-            setSession(session);
-            if (session) {
-                const userEmail = session.user.email;
-                if (userEmail === SUPER_ADMIN_EMAIL) {
-                    setUserRole(UserRole.SuperAdmin);
-                    setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
-                    const { data: schoolsData, error } = await supabase.from('schools').select('*, principals(*)');
-                    if(error) console.error("Error fetching schools for superadmin", error);
-                    else setSchools(snakeToCamelCase(schoolsData));
-                    setPage(Page.SuperAdminDashboard);
-                } else {
-                    const code = userEmail?.split('@')[0];
-                    const schoolId = userEmail?.split('@')[1].split('.')[0];
-                    if (code && schoolId) {
-                        await fetchSchoolData(schoolId);
+            try {
+                setSession(session);
+                if (session) {
+                    const userEmail = session.user.email;
+                    if (userEmail === SUPER_ADMIN_EMAIL) {
+                        setUserRole(UserRole.SuperAdmin);
+                        setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
+                        const { data: schoolsData, error } = await supabase.from('schools').select('*, principals(*)');
+                        if (error) throw error;
+                        setSchools(snakeToCamelCase(schoolsData));
+                        setPage(Page.SuperAdminDashboard);
+                    } else {
+                        const code = userEmail?.split('@')[0];
+                        const schoolId = userEmail?.split('@')[1].split('.')[0];
+                        if (code && schoolId) {
+                            await fetchSchoolData(schoolId);
+                        } else {
+                           resetAppState();
+                        }
                     }
+                } else {
+                    resetAppState();
                 }
-            } else {
-                handleLogout();
+            } catch (error) {
+                console.error("Error in auth state change:", error);
+                resetAppState();
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         });
 
         return () => subscription.unsubscribe();
-    }, [fetchSchoolData]);
+    }, [fetchSchoolData, resetAppState]);
 
     useEffect(() => {
         if (school && session && session.user.email !== SUPER_ADMIN_EMAIL) {
@@ -426,7 +438,7 @@ const App: React.FC = () => {
     
     const renderPage = () => {
         if (isLoading) {
-            return <div className="flex items-center justify-center h-screen">Loading...</div>;
+            return <div className="flex items-center justify-center h-screen dark:text-gray-200">...Loading</div>;
         }
 
         if (!isSupabaseConfigured && page !== Page.UnifiedLogin) {
@@ -443,50 +455,50 @@ const App: React.FC = () => {
             case UserRole.SuperAdmin:
                 switch (page) {
                     case Page.SuperAdminDashboard:
-                        return <SuperAdminDashboard schools={schools} onLogout={handleLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
+                        return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
                     case Page.SuperAdminSchoolManagement:
                         // This would need a selected school state
-                        return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={()=>{}} onToggleStatus={()=>{}} onToggleStage={()=>{}} onToggleFeatureFlag={()=>{}} onEnterFeaturePage={()=>{}} onAddPrincipal={()=>{}} onDeletePrincipal={()=>{}} onUpdatePrincipalCode={()=>{}} />;
+                        return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={()=>{}} onToggleStatus={()=>{}} onToggleStage={()=>{}} onToggleFeatureFlag={()=>{}} onEnterFeaturePage={()=>{}} onAddPrincipal={()=>{}} onDeletePrincipal={()=>{}} onUpdatePrincipalCode={()=>{}} />;
                     default:
                         return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                 }
 
             case UserRole.Principal:
-                 if (school && !school.isActive) return <MaintenanceScreen onLogout={handleLogout} />;
+                 if (school && !school.isActive) return <MaintenanceScreen onLogout={performLogout} />;
                 switch (page) {
                     case Page.PrincipalStageSelection:
                         const accessibleStages = Object.values(school?.principals || {}).flat().filter(p => p.id === (currentUser as Principal).id).map(p => p.stage);
-                        return <PrincipalStageSelection school={school!} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={handleLogout} />;
+                        return <PrincipalStageSelection school={school!} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
                     case Page.PrincipalDashboard:
-                        return <PrincipalDashboard school={school!} stage={selectedStage!} onSelectAction={setPage} onLogout={handleLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalDashboard school={school!} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalManagementMenu:
-                        return <PrincipalManagementMenu school={school!} stage={selectedStage!} onSelectAction={setPage} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalManagementMenu school={school!} stage={selectedStage!} onSelectAction={setPage} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalManageStudents:
-                        return <PrincipalManageStudents school={school!} stage={selectedStage!} students={school?.students.filter(s => s.stage === selectedStage) || []} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddStudent={() => {}} onUpdateStudent={() => {}} onDeleteStudent={() => {}} onAddMultipleStudents={()=>{}}/>;
+                        return <PrincipalManageStudents school={school!} stage={selectedStage!} students={school?.students.filter(s => s.stage === selectedStage) || []} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddStudent={() => {}} onUpdateStudent={() => {}} onDeleteStudent={() => {}} onAddMultipleStudents={()=>{}}/>;
                     case Page.PrincipalManageTeachers:
-                        return <PrincipalManageTeachers school={school!} stage={selectedStage!} teachers={school?.teachers || []} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddTeacher={() => {}} onUpdateTeacher={() => {}} onDeleteTeacher={() => {}} />;
+                        return <PrincipalManageTeachers school={school!} stage={selectedStage!} teachers={school?.teachers || []} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddTeacher={() => {}} onUpdateTeacher={() => {}} onDeleteTeacher={() => {}} />;
                     case Page.PrincipalFeeManagement:
-                         return <PrincipalFeeManagement school={school!} onUpdateFees={() => {}} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                         return <PrincipalFeeManagement school={school!} onUpdateFees={() => {}} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalEducationalTips:
-                        return <PrincipalEducationalTips school={school!} tips={school?.educationalTips || []} onAddTip={() => {}} onGenerateAITip={async () => "AI Tip"} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalEducationalTips school={school!} tips={school?.educationalTips || []} onAddTip={() => {}} onGenerateAITip={async () => "AI Tip"} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalAnnouncements:
-                        return <PrincipalAnnouncements school={school!} announcements={school?.announcements || []} teachers={school?.teachers || []} onAddAnnouncement={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalAnnouncements school={school!} announcements={school?.announcements || []} teachers={school?.teachers || []} onAddAnnouncement={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                      case Page.PrincipalComplaints:
-                        return <PrincipalComplaints school={school!} complaints={school?.complaints || []} students={school?.students || []} onAnalyze={async () => "AI Analysis"} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalComplaints school={school!} complaints={school?.complaints || []} students={school?.students || []} onAnalyze={async () => "AI Analysis"} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalReviewNotes:
-                        return <PrincipalReviewNotes school={school!} stage={selectedStage!} notes={school?.notes || []} students={school?.students || []} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalReviewNotes school={school!} stage={selectedStage!} notes={school?.notes || []} students={school?.students || []} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalReviewAlbum:
-                        return <PrincipalReviewAlbum school={school!} pendingPhotos={(school?.albumPhotos || []).filter(p=>p.status === 'pending')} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalReviewAlbum school={school!} pendingPhotos={(school?.albumPhotos || []).filter(p=>p.status === 'pending')} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalPerformanceTracking:
-                        return <PrincipalPerformanceTracking school={school!} stage={selectedStage!} students={school?.students || []} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalPerformanceTracking school={school!} stage={selectedStage!} students={school?.students || []} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalMonthlyFees:
-                        return <PrincipalMonthlyFees school={school!} stage={selectedStage!} students={school?.students.filter(s => s.stage === selectedStage) || []} payments={school?.monthlyFeePayments || []} onMarkAsPaid={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalMonthlyFees school={school!} stage={selectedStage!} students={school?.students.filter(s => s.stage === selectedStage) || []} payments={school?.monthlyFeePayments || []} onMarkAsPaid={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalInterviewRequests:
-                        return <PrincipalInterviewRequests school={school!} requests={(school?.interviewRequests || []).filter(r => r.status === 'pending')} students={school?.students || []} onComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalInterviewRequests school={school!} requests={(school?.interviewRequests || []).filter(r => r.status === 'pending')} students={school?.students || []} onComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalFinancialDashboard:
-                        return <PrincipalFinancialDashboard school={school!} stage={selectedStage!} onAddExpense={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalFinancialDashboard school={school!} stage={selectedStage!} onAddExpense={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                      case Page.PrincipalBrowseAsTeacherSelection:
-                        return <PrincipalBrowseAsTeacherSelection school={school!} stage={selectedStage!} onSelectionComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalBrowseAsTeacherSelection school={school!} stage={selectedStage!} onSelectionComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     
                     default:
                         return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
