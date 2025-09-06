@@ -175,12 +175,21 @@ const App: React.FC = () => {
         setSearchResults([]);
         setSelectedSearchResult(null);
     }, []);
-
-    const fetchSchoolData = useCallback(async (schoolId: string) => {
+    
+    const performLogout = useCallback(async () => {
+        if (isSupabaseConfigured) {
+            const { error } = await supabase.auth.signOut();
+            if (error) console.error("Error signing out:", error);
+        }
+        // onAuthStateChange will handle resetting the state
         if (!isSupabaseConfigured) {
-            const mockSchool = MOCK_SCHOOLS.find(s => s.id === schoolId);
-            setSchool(mockSchool || null);
-            return;
+             resetAppState();
+        }
+    }, [resetAppState]);
+
+    const fetchSchoolData = useCallback(async (schoolId: string): Promise<School | null> => {
+        if (!isSupabaseConfigured) {
+            return MOCK_SCHOOLS.find(s => s.id === schoolId) || null;
         }
 
         const { data, error } = await supabase
@@ -227,23 +236,11 @@ const App: React.FC = () => {
         }
 
         if (data) {
-            const processedData = flattenAndProcessSchoolData(data);
-            setSchool(processedData);
+            return flattenAndProcessSchoolData(data);
         }
+        return null;
     }, []);
     
-    const performLogout = useCallback(async () => {
-        if (isSupabaseConfigured) {
-            const { error } = await supabase.auth.signOut();
-            if (error) console.error("Error signing out:", error);
-        }
-        // onAuthStateChange will handle resetting the state
-        if (!isSupabaseConfigured) {
-             resetAppState();
-        }
-    }, [resetAppState]);
-
-
     const handleLogin = async (code: string) => {
         if (!isSupabaseConfigured) {
             if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
@@ -358,82 +355,84 @@ const App: React.FC = () => {
         }
     };
     
-     useEffect(() => {
+    useEffect(() => {
         if (!isSupabaseConfigured) {
             setIsLoading(false);
             return;
         }
 
-        const authResult = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setIsLoading(true);
-            try {
-                setSession(session);
-                if (session) {
-                    const userEmail = session.user.email;
-                    if (userEmail === SUPER_ADMIN_EMAIL) {
-                        setUserRole(UserRole.SuperAdmin);
-                        setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
-                        const { data: schoolsData, error } = await supabase.from('schools').select('*, principals(*)');
-                        if (error) throw error;
-                        setSchools(snakeToCamelCase(schoolsData));
-                        setPage(Page.SuperAdminDashboard);
-                    } else {
-                        const code = userEmail?.split('@')[0];
-                        const schoolId = userEmail?.split('@')[1].split('.')[0];
-                        if (code && schoolId) {
-                            await fetchSchoolData(schoolId);
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            async (_event: string, session: any) => {
+                setIsLoading(true);
+                try {
+                    setSession(session);
+                    if (session) {
+                        const userEmail = session.user?.email;
+                        if (userEmail === SUPER_ADMIN_EMAIL) {
+                            const { data: schoolsData, error } = await supabase.from('schools').select('*, principals(*)');
+                            if (error) throw error;
+                            setSchools(snakeToCamelCase(schoolsData));
+                            setUserRole(UserRole.SuperAdmin);
+                            setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
+                            setPage(Page.SuperAdminDashboard);
                         } else {
-                           resetAppState();
+                            const code = userEmail?.split('@')[0];
+                            const schoolId = userEmail?.split('@')[1]?.split('.')[0];
+                            if (code && schoolId) {
+                                const fetchedSchool = await fetchSchoolData(schoolId);
+                                if (fetchedSchool) {
+                                    setSchool(fetchedSchool);
+                                    const student = fetchedSchool.students.find(s => s.guardianCode === code);
+                                    if (student) {
+                                        setUserRole(UserRole.Guardian);
+                                        setCurrentUser(student);
+                                        setPage(Page.GuardianDashboard);
+                                        return;
+                                    }
+                                    const teacher = fetchedSchool.teachers.find(t => t.loginCode === code);
+                                    if (teacher) {
+                                        setUserRole(UserRole.Teacher);
+                                        setCurrentUser(teacher);
+                                        setPage(Page.TeacherDashboard);
+                                        return;
+                                    }
+                                    for (const stage in fetchedSchool.principals) {
+                                        const principal = fetchedSchool.principals[stage as EducationalStage]?.find(p => p.loginCode === code);
+                                        if (principal) {
+                                            setUserRole(UserRole.Principal);
+                                            setCurrentUser(principal);
+                                            setPage(Page.PrincipalStageSelection);
+                                            return;
+                                        }
+                                    }
+                                    console.error("User from session not found in school data. Logging out.");
+                                    await performLogout();
+                                } else {
+                                    console.error("School not found for user. Logging out.");
+                                    await performLogout();
+                                }
+                            } else {
+                                console.error("Invalid email in session. Logging out.");
+                                await performLogout();
+                            }
                         }
+                    } else {
+                        resetAppState();
                     }
-                } else {
+                } catch (error) {
+                    console.error("Error processing auth state change:", error);
                     resetAppState();
+                } finally {
+                    setIsLoading(false);
                 }
-            } catch (error) {
-                console.error("Error in auth state change:", error);
-                // Also reset state on error to avoid being stuck in a bad state
-                resetAppState();
-            } finally {
-                // This ensures loading is always turned off
-                setIsLoading(false);
             }
-        });
-        
-        const subscription = authResult?.data?.subscription;
+        );
 
         return () => {
-            subscription?.unsubscribe();
+            authListener?.subscription.unsubscribe();
         };
-    }, [fetchSchoolData, resetAppState]);
+    }, [fetchSchoolData, resetAppState, performLogout]);
 
-    useEffect(() => {
-        if (school && session && session.user.email !== SUPER_ADMIN_EMAIL) {
-            const code = session.user.email.split('@')[0];
-            const student = school.students.find(s => s.guardianCode === code);
-            if (student) {
-                setUserRole(UserRole.Guardian);
-                setCurrentUser(student);
-                setPage(Page.GuardianDashboard);
-                return;
-            }
-            const teacher = school.teachers.find(t => t.loginCode === code);
-            if (teacher) {
-                setUserRole(UserRole.Teacher);
-                setCurrentUser(teacher);
-                setPage(Page.TeacherDashboard);
-                return;
-            }
-            for (const stage in school.principals) {
-                const principal = school.principals[stage as EducationalStage]?.find(p => p.loginCode === code);
-                if (principal) {
-                    setUserRole(UserRole.Principal);
-                    setCurrentUser(principal);
-                    setPage(Page.PrincipalStageSelection);
-                    return;
-                }
-            }
-        }
-    }, [school, session]);
     
     // In App.tsx
     const navigateTo = (page: Page) => {
@@ -453,14 +452,6 @@ const App: React.FC = () => {
         }
 
         if (isLoading) {
-            return <div className="flex items-center justify-center h-screen dark:text-gray-200">Loading...</div>;
-        }
-
-        // This logic is a side-effect and is better handled in useEffect, 
-        // but for now let's keep it to avoid breaking changes.
-        if (page !== Page.UnifiedLogin && !session && isSupabaseConfigured) {
-             // To prevent infinite loops, we do this check only once.
-            setTimeout(() => setPage(Page.UnifiedLogin), 0);
             return <div className="flex items-center justify-center h-screen dark:text-gray-200">Loading...</div>;
         }
 
