@@ -110,9 +110,6 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
             }
         } catch (err: any) {
             setStatus('incorrect');
-            // FIX: Add specific error handling for the "Email not confirmed" case.
-            // This provides a much clearer, actionable error message to the user,
-            // guiding them to the correct Supabase setting that is blocking login.
             if (err.message === 'SUPABASE_EMAIL_CONFIRMATION_ERROR') {
                 setError(t('supabaseEmailConfirmationError'));
             } else if (err.message.includes('Invalid login credentials')) {
@@ -142,10 +139,12 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-1">{t('unifiedLoginWelcome')}</h1>
             </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-8">{t('unifiedLoginPrompt')}</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+                <label htmlFor="login-code-input" className="text-gray-600 dark:text-gray-300 mb-4 block">{t('unifiedLoginPrompt')}</label>
                 <input
+                    id="login-code-input"
+                    name="loginCode"
                     type={inputType}
                     value={code}
                     onChange={handleCodeChange}
@@ -155,14 +154,16 @@ const UnifiedLoginScreen: React.FC<UnifiedLoginScreenProps> = ({ onLogin, toggle
                     disabled={status === 'checking' || status === 'correct'}
                 />
                 <div className="flex items-center justify-center">
-                    <input
-                        id="remember-me"
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <label htmlFor="remember-me" className="ms-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('rememberMe')}</label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input
+                            name="rememberMe"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                        />
+                        <span>{t('rememberMe')}</span>
+                    </label>
                 </div>
                 <button
                     type="submit"
