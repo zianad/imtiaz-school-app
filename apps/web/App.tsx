@@ -78,6 +78,33 @@ import SearchHeader from './components/common/SearchHeader';
 import SearchResultModal from './components/common/SearchResultModal';
 import ConfirmationModal from './components/common/ConfirmationModal';
 
+const flattenAndProcessSchoolData = (schoolData: any) => {
+    const students = schoolData.students || [];
+    const flattenedData = {
+        ...schoolData,
+        summaries: students.flatMap((s: any) => s.summaries || []),
+        exercises: students.flatMap((s: any) => s.exercises || []),
+        notes: students.flatMap((s: any) => s.notes || []),
+        absences: students.flatMap((s: any) => s.absences || []),
+        examPrograms: students.flatMap((s: any) => s.exam_programs || []),
+        notifications: students.flatMap((s: any) => s.notifications || []),
+        complaints: students.flatMap((s: any) => s.complaints || []),
+        monthlyFeePayments: students.flatMap((s: any) => s.monthly_fee_payments || []),
+        interviewRequests: students.flatMap((s: any) => s.interview_requests || []),
+        personalizedExercises: students.flatMap((s: any) => s.personalized_exercises || []),
+        supplementaryLessons: students.flatMap((s: any) => s.supplementary_lessons || []),
+        timetables: students.flatMap((s: any) => s.timetables || []),
+        quizzes: students.flatMap((s: any) => s.quizzes || []),
+        projects: students.flatMap((s: any) => s.projects || []),
+        libraryItems: students.flatMap((s: any) => s.library_items || []),
+        albumPhotos: students.flatMap((s: any) => s.album_photos || []),
+        unifiedAssessments: students.flatMap((s: any) => s.unified_assessments || []),
+        talkingCards: students.flatMap((s: any) => s.talking_cards || []),
+        memorizationItems: students.flatMap((s: any) => s.memorization_items || []),
+    };
+    return snakeToCamelCase(flattenedData);
+};
+
 
 const App: React.FC = () => {
     const { t } = useTranslation();
@@ -131,32 +158,23 @@ const App: React.FC = () => {
         localStorage.setItem('darkMode', String(isDarkMode));
     }, [isDarkMode]);
 
-    const flattenAndProcessSchoolData = (schoolData: any) => {
-        const students = schoolData.students || [];
-        const flattenedData = {
-            ...schoolData,
-            summaries: students.flatMap((s: any) => s.summaries || []),
-            exercises: students.flatMap((s: any) => s.exercises || []),
-            notes: students.flatMap((s: any) => s.notes || []),
-            absences: students.flatMap((s: any) => s.absences || []),
-            examPrograms: students.flatMap((s: any) => s.exam_programs || []),
-            notifications: students.flatMap((s: any) => s.notifications || []),
-            complaints: students.flatMap((s: any) => s.complaints || []),
-            monthlyFeePayments: students.flatMap((s: any) => s.monthly_fee_payments || []),
-            interviewRequests: students.flatMap((s: any) => s.interview_requests || []),
-            personalizedExercises: students.flatMap((s: any) => s.personalized_exercises || []),
-            supplementaryLessons: students.flatMap((s: any) => s.supplementary_lessons || []),
-            timetables: students.flatMap((s: any) => s.timetables || []),
-            quizzes: students.flatMap((s: any) => s.quizzes || []),
-            projects: students.flatMap((s: any) => s.projects || []),
-            libraryItems: students.flatMap((s: any) => s.library_items || []),
-            albumPhotos: students.flatMap((s: any) => s.album_photos || []),
-            unifiedAssessments: students.flatMap((s: any) => s.unified_assessments || []),
-            talkingCards: students.flatMap((s: any) => s.talking_cards || []),
-            memorizationItems: students.flatMap((s: any) => s.memorization_items || []),
-        };
-        return snakeToCamelCase(flattenedData);
-    };
+    const resetAppState = useCallback(() => {
+        setPage(Page.UnifiedLogin);
+        setUserRole(null);
+        setCurrentUser(null);
+        setSchool(null);
+        setSchools([]);
+        setSession(null);
+        setSelectedStage(null);
+        setSelectedLevel('');
+        setSelectedSubject(null);
+        setSelectedClass('');
+        setIsImpersonating(false);
+        setImpersonatedTeacher(null);
+        setSearchQuery('');
+        setSearchResults([]);
+        setSelectedSearchResult(null);
+    }, []);
 
     const fetchSchoolData = useCallback(async (schoolId: string) => {
         if (!isSupabaseConfigured) {
@@ -214,31 +232,14 @@ const App: React.FC = () => {
         }
     }, []);
     
-    const resetAppState = useCallback(() => {
-        setPage(Page.UnifiedLogin);
-        setUserRole(null);
-        setCurrentUser(null);
-        setSchool(null);
-        setSchools([]);
-        setSession(null);
-        setSelectedStage(null);
-        setSelectedLevel('');
-        setSelectedSubject(null);
-        setSelectedClass('');
-        setIsImpersonating(false);
-        setImpersonatedTeacher(null);
-        setSearchQuery('');
-        setSearchResults([]);
-        setSelectedSearchResult(null);
-    }, []);
-
     const performLogout = useCallback(async () => {
         if (isSupabaseConfigured) {
             const { error } = await supabase.auth.signOut();
             if (error) console.error("Error signing out:", error);
         }
+        // onAuthStateChange will handle resetting the state
         if (!isSupabaseConfigured) {
-            resetAppState();
+             resetAppState();
         }
     }, [resetAppState]);
 
@@ -280,7 +281,7 @@ const App: React.FC = () => {
                     }
                 }
             }
-            throw new Error('Invalid login credentials');
+            throw new Error("Invalid login credentials");
         }
 
         if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
@@ -324,7 +325,7 @@ const App: React.FC = () => {
         }
 
         if (!userResult || !userRoleAttempt || !schoolId) {
-            throw new Error("Invalid login credentials");
+            throw new Error(t('invalidCode'));
         }
         
         const email = `${code}@${schoolId}.com`;
@@ -363,7 +364,7 @@ const App: React.FC = () => {
             return;
         }
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const authResult = supabase.auth.onAuthStateChange(async (_event, session) => {
             setIsLoading(true);
             try {
                 setSession(session);
@@ -390,13 +391,19 @@ const App: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Error in auth state change:", error);
+                // Also reset state on error to avoid being stuck in a bad state
                 resetAppState();
             } finally {
+                // This ensures loading is always turned off
                 setIsLoading(false);
             }
         });
+        
+        const subscription = authResult?.data?.subscription;
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription?.unsubscribe();
+        };
     }, [fetchSchoolData, resetAppState]);
 
     useEffect(() => {
@@ -437,18 +444,24 @@ const App: React.FC = () => {
     // NOTE: This will be a very large component. Consider splitting logic into hooks.
     
     const renderPage = () => {
-        if (isLoading) {
-            return <div className="flex items-center justify-center h-screen dark:text-gray-200">...Loading</div>;
+        if (!isSupabaseConfigured) {
+            // Using mocks, but check if env vars were intended.
+            // A simple check can prevent a common deployment error.
+            if ((import.meta as any).env.PROD && !(import.meta as any).env.VITE_SUPABASE_URL) {
+                return <ConfigErrorScreen />;
+            }
         }
 
-        if (!isSupabaseConfigured && page !== Page.UnifiedLogin) {
-            // In offline mode, we allow continuing
-        } else if (!isSupabaseConfigured) {
-             // Let login screen show, but it will use mocks.
+        if (isLoading) {
+            return <div className="flex items-center justify-center h-screen dark:text-gray-200">Loading...</div>;
         }
-        else if (page !== Page.UnifiedLogin && !session) {
-            // If not logged in and not on login page, force login
-            setPage(Page.UnifiedLogin);
+
+        // This logic is a side-effect and is better handled in useEffect, 
+        // but for now let's keep it to avoid breaking changes.
+        if (page !== Page.UnifiedLogin && !session && isSupabaseConfigured) {
+             // To prevent infinite loops, we do this check only once.
+            setTimeout(() => setPage(Page.UnifiedLogin), 0);
+            return <div className="flex items-center justify-center h-screen dark:text-gray-200">Loading...</div>;
         }
 
         switch (userRole) {
@@ -460,7 +473,8 @@ const App: React.FC = () => {
                         // This would need a selected school state
                         return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={()=>{}} onToggleStatus={()=>{}} onToggleStage={()=>{}} onToggleFeatureFlag={()=>{}} onEnterFeaturePage={()=>{}} onAddPrincipal={()=>{}} onDeletePrincipal={()=>{}} onUpdatePrincipalCode={()=>{}} />;
                     default:
-                        return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        // Fallback to dashboard if page is invalid for this role
+                        return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
                 }
 
             case UserRole.Principal:
@@ -501,7 +515,8 @@ const App: React.FC = () => {
                         return <PrincipalBrowseAsTeacherSelection school={school!} stage={selectedStage!} onSelectionComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     
                     default:
-                        return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        // Fallback to stage selection if page is invalid
+                        return <PrincipalStageSelection school={school!} accessibleStages={Object.values(school?.principals || {}).flat().filter(p => p.id === (currentUser as Principal).id).map(p => p.stage)} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
                 }
             
             case UserRole.Teacher:
