@@ -134,16 +134,52 @@ const App: React.FC = () => {
     }
     return camelSchool;
   }, []);
+  
+  const SCHOOL_FULL_QUERY = `
+    *, 
+    students(*), 
+    teachers(*), 
+    principals(*),
+    notes(*),
+    announcements(*),
+    complaints(*),
+    educational_tips(*),
+    monthly_fee_payments(*),
+    interview_requests(*),
+    summaries(*),
+    exercises(*),
+    absences(*),
+    exam_programs(*),
+    notifications(*),
+    supplementary_lessons(*),
+    timetables(*),
+    quizzes(*),
+    projects(*),
+    library_items(*),
+    album_photos(*),
+    personalized_exercises(*),
+    unified_assessments(*),
+    talking_cards(*),
+    memorization_items(*),
+    expenses(*),
+    feedback(*)
+  `;
 
   const refreshSchoolState = useCallback(async (schoolId: string) => {
-    const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select('*, principals(*)').eq('id', schoolId).single();
-    if (refreshError) throw refreshError;
-    setSchool(processSchoolData(refreshedSchool));
+    setIsLoading(true);
+    const { data: refreshedSchool, error: refreshError } = await supabase.from('schools').select(SCHOOL_FULL_QUERY).eq('id', schoolId).single();
+    if (refreshError) {
+        console.error("Error refreshing school state:", refreshError);
+        alert(`Error: ${refreshError.message}`);
+    } else {
+        setSchool(processSchoolData(refreshedSchool));
+    }
 
     const { data: allSchools, error: allSchoolsError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
     if (allSchoolsError) throw allSchoolsError;
     setSchools(processSchoolData(allSchools));
-  }, [processSchoolData]);
+    setIsLoading(false);
+  }, [processSchoolData, SCHOOL_FULL_QUERY]);
 
 
   useEffect(() => {
@@ -179,37 +215,23 @@ const App: React.FC = () => {
   };
 
   const handleBack = () => {
-    // A simplified back logic, can be improved with a history stack
-    switch (page) {
-      case Page.GuardianSubjectMenu: setPage(Page.GuardianDashboard); break;
-      case Page.GuardianViewSummaries:
-      case Page.GuardianViewExercises:
-      case Page.GuardianViewNotes:
-      case Page.GuardianViewGrades:
-        setPage(Page.GuardianSubjectMenu);
-        break;
-      case Page.TeacherClassSelection: setPage(Page.TeacherDashboard); break;
-      case Page.TeacherActionMenu: setPage(isImpersonating ? Page.PrincipalBrowseAsTeacherSelection : Page.TeacherDashboard); break;
-      case Page.TeacherManageSummaries:
-      case Page.TeacherManageExercises:
-      case Page.TeacherManageNotes:
-      case Page.TeacherStudentSelection:
-        setPage(Page.TeacherActionMenu);
-        break;
-      case Page.TeacherStudentGrades: setPage(Page.TeacherStudentSelection); break;
-      case Page.PrincipalDashboard: setPage(isImpersonating ? Page.SuperAdminSchoolManagement : Page.PrincipalStageSelection); break;
-      case Page.PrincipalManageTeachers:
-      case Page.PrincipalManageStudents:
-      case Page.PrincipalManagementMenu:
-        setPage(Page.PrincipalDashboard);
-        break;
-      case Page.SuperAdminSchoolManagement: setPage(Page.SuperAdminDashboard); break;
-      default: setPage(Page.UnifiedLogin); // Fallback
-    }
-     if (isImpersonating && page === Page.TeacherDashboard) {
-      setIsImpersonating(false);
-      setPage(Page.PrincipalDashboard);
-    }
+    // This is a simplified back navigation. A stack-based approach would be more robust.
+    // For now, it handles the most common flows.
+    setPage(prevPage => {
+        // Reset specific states when going back
+        if (prevPage === Page.GuardianSubjectMenu) { setSelectedSubject(null); return Page.GuardianDashboard; }
+        if ([Page.GuardianViewSummaries, Page.GuardianViewExercises, Page.GuardianViewNotes, Page.GuardianViewGrades, Page.GuardianViewExamProgram].includes(prevPage)) { return Page.GuardianSubjectMenu; }
+        if (prevPage === Page.TeacherActionMenu) { setSelectedLevel(''); setSelectedSubject(null); return isImpersonating ? Page.PrincipalBrowseAsTeacherSelection : Page.TeacherDashboard; }
+        if (prevPage === Page.TeacherStudentSelection || prevPage === Page.TeacherManageSummaries) { return Page.TeacherActionMenu; }
+        if (prevPage === Page.PrincipalDashboard) { setSelectedStage(null); return isImpersonating ? Page.SuperAdminSchoolManagement : Page.PrincipalStageSelection; }
+        if (prevPage === Page.SuperAdminSchoolManagement) { setSchool(null); return Page.SuperAdminDashboard; }
+        if (isImpersonating && prevPage === Page.TeacherDashboard) { setIsImpersonating(false); return Page.PrincipalDashboard; }
+        // Default back for most pages
+        if (userRole === UserRole.Principal) return Page.PrincipalDashboard;
+        if (userRole === UserRole.Teacher) return Page.TeacherDashboard;
+        if (userRole === UserRole.Guardian) return Page.GuardianDashboard;
+        return Page.UnifiedLogin;
+    });
   };
   
   const showConfirmation = (title: string, message: string, onConfirm: () => void) => {
@@ -302,7 +324,7 @@ const App: React.FC = () => {
             // Fetch school data
             const { data: schoolData, error: schoolError } = await supabase
                 .from('schools')
-                .select(`*, students(*), teachers(*), principals(*)`)
+                .select(SCHOOL_FULL_QUERY)
                 .eq('id', userMatch.schoolId)
                 .single();
             if (schoolError) throw schoolError;
@@ -329,7 +351,7 @@ const App: React.FC = () => {
             throw new Error(t('invalidCode'));
         }
     }
-  }, [t, processSchoolData]);
+  }, [t, processSchoolData, SCHOOL_FULL_QUERY]);
   
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
@@ -341,6 +363,10 @@ const App: React.FC = () => {
     setIsImpersonating(false);
   }, []);
   
+  // =================================================================
+  // Mutation Handlers (add, update, delete)
+  // =================================================================
+
   const handleAddSchool = async (name: string, principalCode: string, logo: string) => {
     if (!name || !principalCode) {
       alert(t('enterSchoolNameAndCode'));
@@ -380,10 +406,9 @@ const App: React.FC = () => {
         await supabase.from('schools').delete().match({ id: newSchoolId });
         throw principalError;
       }
-
-      const { data, error: refreshError } = await supabase.from('schools').select('id, name, logo_url, is_active, stages, feature_flags, principals:principals(id, name, login_code, stage)');
-      if (refreshError) throw refreshError;
-      setSchools(processSchoolData(data));
+      
+      await refreshSchoolState(newSchoolId);
+      setPage(Page.SuperAdminDashboard); // Go back to dashboard after creation
 
     } catch (error: any) {
       console.error("Error adding school:", error);
@@ -402,7 +427,7 @@ const App: React.FC = () => {
                 setIsLoading(true);
                 const { error } = await supabase.from('schools').delete().match({ id: schoolId });
                 if (error) throw error;
-                setSchools(prev => prev.filter(s => s.id !== schoolId));
+                await refreshSchoolState(schoolId); // This will update the list
             } catch (error: any) {
                 alert(`${t('failedToDeleteSchool')}: ${error.message}`);
             } finally {
@@ -625,7 +650,7 @@ const App: React.FC = () => {
 
             let accessibleStages: EducationalStage[] = [];
             if (school.principals) {
-                if (Array.isArray(school.principals)) {
+                if (Array.isArray(school.principals)) { // Should not happen with processSchoolData
                     accessibleStages = school.principals
                         .filter(p => p && p.id === principal.id)
                         .map(p => p.stage);
@@ -643,6 +668,19 @@ const App: React.FC = () => {
         case Page.PrincipalDashboard:
             if (!school || !selectedStage) return null;
             return <PrincipalDashboard school={school} stage={selectedStage} onSelectAction={(p) => navigateTo(p)} onLogout={handleLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+        
+        // --- Principal Pages ---
+        case Page.PrincipalManagementMenu:
+             if (!school || !selectedStage) return null;
+             return <PrincipalManagementMenu school={school} stage={selectedStage} onSelectAction={navigateTo} onBack={handleBack} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+        case Page.PrincipalManageStudents:
+            if (!school || !selectedStage) return null;
+            return <PrincipalManageStudents school={school} stage={selectedStage} students={school.students.filter(s => s.stage === selectedStage)} onBack={handleBack} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddStudent={async (s) => { /* TODO */ }} onAddMultipleStudents={async (s) => { /* TODO */ }} onUpdateStudent={async (s) => { /* TODO */ }} onDeleteStudent={async (id, name) => { /* TODO */ }} />
+        case Page.PrincipalManageTeachers:
+             if (!school || !selectedStage) return null;
+             return <PrincipalManageTeachers school={school} stage={selectedStage} teachers={school.teachers} onBack={handleBack} onLogout={handleLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onAddTeacher={async (t) => { /* TODO */}} onUpdateTeacher={async (t) => { /* TODO */}} onDeleteTeacher={async (id, name) => { /* TODO */}} />
+        // ... Add all other principal pages here ...
+
         case Page.GuardianDashboard:
             if (!school || !currentUser) return null;
             return <GuardianDashboard student={currentUser as Student} school={school} notifications={school.notifications || []} onSelectSubject={(s) => {setSelectedSubject(s); setPage(Page.GuardianSubjectMenu)}} onLogout={handleLogout} navigateTo={navigateTo} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
@@ -664,7 +702,7 @@ const App: React.FC = () => {
         case Page.Maintenance:
             return <MaintenanceScreen onLogout={handleLogout} />;
         default:
-            return <div className="text-center"><p className="text-2xl font-bold dark:text-white">Page not found</p></div>;
+            return <div className="text-center"><p className="text-2xl font-bold dark:text-white">Page not found for role {userRole} and page {page}</p></div>;
     }
   };
 
@@ -690,7 +728,17 @@ const App: React.FC = () => {
             <FeedbackModal 
                 isOpen={showFeedbackModal}
                 onClose={() => setShowFeedbackModal(false)}
-                onSubmit={(rating, comments) => { /* ... */ }}
+                onSubmit={async (rating, comments) => { 
+                    if (!school || !userRole) return;
+                    await supabase.from('feedback').insert([{
+                        school_id: school.id,
+                        user_role: userRole,
+                        rating,
+                        comments
+                    }]);
+                    alert(t('feedbackThanks'));
+                    setShowFeedbackModal(false);
+                 }}
             />
         )}
         {selectedSearchResult && (
@@ -701,7 +749,10 @@ const App: React.FC = () => {
                 isOpen={confirmation.isOpen}
                 title={confirmation.title}
                 message={confirmation.message}
-                onConfirm={confirmation.onConfirm}
+                onConfirm={() => {
+                    confirmation.onConfirm();
+                    setConfirmation(null);
+                }}
                 onCancel={() => setConfirmation(null)}
             />
         )}
