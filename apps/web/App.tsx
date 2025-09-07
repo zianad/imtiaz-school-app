@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI, GenerateContentResponse, Type } from '@google/genai';
 import { Page, UserRole, Student, Teacher, Principal, Subject, School, Grade, Summary, Exercise, Note, Absence, ExamProgram, Notification, Announcement, Complaint, EducationalTip, InterviewRequest, MonthlyFeePayment, SupplementaryLesson, UnifiedAssessment, Timetable, Quiz, Project, LibraryItem, PersonalizedExercise, AlbumPhoto, TalkingCard, Hotspot, MemorizationItem, Expense, Feedback } from '../../packages/core/types';
@@ -87,7 +86,7 @@ const App: React.FC = () => {
     const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
     // AI instance
-    const ai = new GoogleGenAI({apiKey: process.env.API_KEY as string});
+    const ai = new GoogleGenAI({apiKey: (import.meta as any).env.VITE_API_KEY as string});
 
     // Screen-specific state
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
