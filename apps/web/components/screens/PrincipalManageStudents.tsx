@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { School, Student, EducationalStage } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
@@ -65,7 +64,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
         e.preventDefault();
         if (name.trim() && guardianCode.trim() && level && studentClass) {
             const { error } = await supabase.from('students').insert([
-                camelToSnakeCase({ name, guardianCode, stage, level, class: studentClass, schoolId: school.id, grades: {} })
+                camelToSnakeCase({ name, guardianCode, stage, level, class: studentClass, schoolId: school.id })
             ]);
             
             if(error) {
