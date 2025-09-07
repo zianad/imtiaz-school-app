@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent, Absence, Grade } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
-import { useTranslation, useDocumentDirection } from '../../packages/core/i18n';
+import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -78,8 +78,23 @@ import FeedbackModal from './components/FeedbackModal';
 import TeacherViewAnnouncements from './components/screens/TeacherViewAnnouncements';
 
 const App: React.FC = () => {
-    const { t } = useTranslation();
-    useDocumentDirection(); // Hook to manage document lang and dir attributes.
+    const { t, i18n } = useTranslation();
+    
+    // Effect to manage document lang and dir attributes based on language
+    useEffect(() => {
+        const handleLanguageChanged = (lng: string) => {
+            const lang = lng.split('-')[0];
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        };
+        i18n.on('languageChanged', handleLanguageChanged);
+        handleLanguageChanged(i18n.language); // Initial setup
+
+        return () => {
+            i18n.off('languageChanged', handleLanguageChanged);
+        };
+    }, [i18n]);
+
     const [page, setPage] = useState<Page>(Page.UnifiedLogin);
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [currentUser, setCurrentUser] = useState<Student | Teacher | Principal | null>(null);

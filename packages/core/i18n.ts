@@ -1,7 +1,6 @@
 import i18n from 'i18next';
-import { initReactI18next, useTranslation as useOriginalTranslation } from 'react-i18next';
+import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import React, { useEffect } from 'react';
 
 // Re-export the hook for convenience, so other components don't need to change their imports.
 export { useTranslation } from 'react-i18next';
@@ -127,27 +126,5 @@ i18n
       caches: ['localStorage'],
     },
   });
-
-/**
- * A hook to manage document direction based on the current language.
- * This should be called once in the root App component.
- */
-export const useDocumentDirection = () => {
-    const { i18n: i18nInstance } = useOriginalTranslation();
-    useEffect(() => {
-        const handleLanguageChanged = (lng: string) => {
-            const lang = lng.split('-')[0];
-            document.documentElement.lang = lang;
-            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-        };
-        i18nInstance.on('languageChanged', handleLanguageChanged);
-        handleLanguageChanged(i18nInstance.language); // Initial setup
-
-        return () => {
-            i18nInstance.off('languageChanged', handleLanguageChanged);
-        };
-    }, [i18nInstance]);
-};
-
 
 export default i18n;
