@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Teacher, Subject, EducationalStage, School } from '../../../../packages/core/types';
+import { School, Teacher, Subject, EducationalStage } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
 import { supabase } from '../../../../packages/core/supabaseClient';
 import { camelToSnakeCase, snakeToCamelCase } from '../../../../packages/core/utils';
-import BackButton from '../common/BackButton';
-import LogoutButton from '../common/LogoutButton';
-import LanguageSwitcher from '../common/LanguageSwitcher';
-import ThemeSwitcher from '../common/ThemeSwitcher';
-import ConfirmationModal from '../common/ConfirmationModal';
+import BackButton from '../../../../packages/ui/BackButton';
+import LogoutButton from '../../../../packages/ui/LogoutButton';
+import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
+import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface PrincipalManageTeachersProps {
     school: School;
@@ -23,19 +23,18 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
     const { t } = useTranslation();
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-    const [isFormVisible, setIsFormVisible] = useState(false);
-    const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
 
-    // Form state
     const [name, setName] = useState('');
     const [loginCode, setLoginCode] = useState('');
     const [salary, setSalary] = useState<number | undefined>(undefined);
-    const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
-    const [assignments, setAssignments] = useState<{ [level: string]: string[] }>({});
-    const [openLevel, setOpenLevel] = useState<string | null>(null);
     
     const stageDetails = STAGE_DETAILS[stage];
+    const stageSubjects = stageDetails.subjects;
+    const stageLevels = stageDetails.levels;
+
+    const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
+    const [assignments, setAssignments] = useState<{ [level: string]: string[] }>({});
+    const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
     const fetchTeachers = useCallback(async () => {
         setIsLoading(true);
@@ -45,7 +44,7 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
             .eq('school_id', school.id);
         
         if (error) {
-            console.error("Error fetching teachers:", error);
+            console.error("Error fetching teachers", error);
         } else {
             setTeachers(snakeToCamelCase(data));
         }
@@ -56,17 +55,6 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
         fetchTeachers();
     }, [fetchTeachers]);
 
-    const resetForm = () => {
-        setName('');
-        setLoginCode('');
-        setSalary(undefined);
-        setSelectedSubjects([]);
-        setAssignments({});
-        setEditingTeacher(null);
-        setIsFormVisible(false);
-        setOpenLevel(null);
-    };
-
     useEffect(() => {
         if (editingTeacher) {
             setName(editingTeacher.name);
@@ -74,11 +62,18 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
             setSalary(editingTeacher.salary);
             setSelectedSubjects(editingTeacher.subjects);
             setAssignments(editingTeacher.assignments);
-            setIsFormVisible(true);
         } else {
             resetForm();
         }
     }, [editingTeacher]);
+    
+    const resetForm = () => {
+        setName('');
+        setLoginCode('');
+        setSalary(undefined);
+        setSelectedSubjects([]);
+        setAssignments({});
+    };
 
     const handleSubjectToggle = (subject: Subject) => {
         setSelectedSubjects(prev =>
@@ -87,80 +82,68 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
     };
 
     const handleLevelToggle = (level: string) => {
-        setAssignments(prev => {
-            const newAssignments = { ...prev };
-            if (newAssignments[level]) {
-                delete newAssignments[level];
-            } else {
-                newAssignments[level] = [];
-            }
-            return newAssignments;
-        });
+        const newAssignments = { ...assignments };
+        if (newAssignments[level]) {
+            delete newAssignments[level];
+        } else {
+            newAssignments[level] = [];
+        }
+        setAssignments(newAssignments);
     };
 
     const handleClassToggle = (level: string, cls: string) => {
-        setAssignments(prev => {
-            const currentClasses = prev[level] || [];
-            const newClasses = currentClasses.includes(cls)
-                ? currentClasses.filter(c => c !== cls)
-                : [...currentClasses, cls];
-            return { ...prev, [level]: newClasses };
-        });
+        const currentClasses = assignments[level] || [];
+        const newClasses = currentClasses.includes(cls)
+            ? currentClasses.filter(c => c !== cls)
+            : [...currentClasses, cls];
+        setAssignments(prev => ({ ...prev, [level]: newClasses }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const hasAssignments = Object.values(assignments).some(classes => classes.length > 0);
         if (name.trim() && loginCode.trim() && selectedSubjects.length > 0 && hasAssignments) {
-            const teacherData = {
-                school_id: school.id,
-                name,
+            const teacherData = { 
+                name, 
                 login_code: loginCode,
-                salary,
-                subjects: selectedSubjects,
+                salary: salary,
+                subjects: selectedSubjects, 
                 assignments,
+                school_id: school.id,
             };
-
-            const { error } = editingTeacher
-                ? await supabase.from('teachers').update(camelToSnakeCase(teacherData)).match({ id: editingTeacher.id })
-                : await supabase.from('teachers').insert(camelToSnakeCase(teacherData));
-
-            if (error) {
-                 if (error.message.includes('violates row-level security policy')) {
-                    alert(t('rlsInsertError'));
-                } else {
-                    alert('Failed to save teacher: ' + error.message);
-                }
+            
+            let result;
+            if (editingTeacher) {
+                result = await supabase.from('teachers').update(teacherData).match({ id: editingTeacher.id });
             } else {
-                await fetchTeachers();
-                resetForm();
+                result = await supabase.from('teachers').insert([teacherData]);
+            }
+            
+            if (result.error) {
+                alert('Error saving teacher: ' + result.error.message);
+            } else {
+                setEditingTeacher(null);
+                fetchTeachers(); // Refresh list
             }
         } else {
-            alert(t('fillAllFields'));
+            alert(t('fillAllFields' as any));
         }
     };
-    
-    const handleDelete = async () => {
-        if (!teacherToDelete) return;
-        const { error } = await supabase.from('teachers').delete().match({ id: teacherToDelete.id });
-        if (error) {
-            alert('Failed to delete teacher: ' + error.message);
-        } else {
-            setTeachers(prev => prev.filter(t => t.id !== teacherToDelete.id));
+
+    const handleDeleteTeacher = async (teacherId: string) => {
+        if(window.confirm(t('confirmDeleteTeacher' as any, { name: teachers.find(t=>t.id === teacherId)?.name }))){
+            const { error } = await supabase.from('teachers').delete().match({ id: teacherId });
+            if(error) {
+                alert('Error deleting teacher: ' + error.message);
+            } else {
+                fetchTeachers(); // Refresh list
+            }
         }
-        setTeacherToDelete(null);
-    };
+    }
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-slate-700 w-full relative">
-            <ConfirmationModal
-                isOpen={!!teacherToDelete}
-                title={`${t('delete')} ${teacherToDelete?.name}`}
-                message={`هل أنت متأكد من رغبتك في حذف الأستاذ؟ لا يمكن التراجع عن هذا الإجراء.`}
-                onConfirm={handleDelete}
-                onCancel={() => setTeacherToDelete(null)}
-            />
-            <div className="flex justify-between items-center mb-6">
+             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
                 </div>
@@ -169,93 +152,64 @@ const PrincipalManageTeachers: React.FC<PrincipalManageTeachersProps> = ({ schoo
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6">{t('manageTeachers')}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('manageTeachers')}</h1>
             
-            {!isFormVisible && (
-                <button 
-                    onClick={() => setIsFormVisible(true)}
-                    className="w-full bg-blue-600 text-white font-bold py-3 mb-6 rounded-lg hover:bg-blue-700 transition"
-                >
-                    + {t('addTeacher')}
-                </button>
-            )}
-
-            {isFormVisible && (
-                <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4">
-                    <h2 className="text-xl font-semibold text-center text-gray-700 dark:text-gray-200">{editingTeacher ? t('edit') : t('addTeacher')}</h2>
-                    <input type="text" placeholder={t('teacherName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded" />
-                    <input type="text" placeholder={t('loginCode')} value={loginCode} onChange={e => setLoginCode(e.target.value)} required className="w-full p-2 border rounded" />
-                    <input type="number" placeholder={t('salaryOptional')} value={salary || ''} onChange={e => setSalary(e.target.value ? Number(e.target.value) : undefined)} className="w-full p-2 border rounded" />
-
-                    <div className="p-2 border rounded">
-                        <h3 className="text-center font-semibold mb-2">{t('subject')}</h3>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                            {stageDetails.subjects.map(s => <button type="button" key={s} onClick={() => handleSubjectToggle(s)} className={`px-3 py-1 rounded-full text-sm ${selectedSubjects.includes(s) ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>{t(s as any)}</button>)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Form Section */}
+                <form onSubmit={handleSubmit} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4 max-h-[75vh] overflow-y-auto">
+                     <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">
+                        {editingTeacher ? `${t('edit')}: ${editingTeacher.name}` : t('addTeacher')}
+                    </h2>
+                    <input type="text" placeholder={t('teacherName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                    <input type="text" placeholder={t('loginCode')} value={loginCode} onChange={e => setLoginCode(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                    <input type="number" placeholder={t('salary' as any)} value={salary ?? ''} onChange={e => setSalary(e.target.value ? Number(e.target.value) : undefined)} className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                    
+                    <div className="p-2 border rounded dark:border-gray-600">
+                        <h3 className="font-semibold text-center text-gray-700 dark:text-gray-200">{t('subject')}</h3>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-2 text-sm text-gray-700 dark:text-gray-300">
+                        {stageSubjects.map(s => (
+                            <label key={s} className="flex items-center gap-1"><input type="checkbox" checked={selectedSubjects.includes(s)} onChange={() => handleSubjectToggle(s)} /> {t(s as any)}</label>
+                        ))}
                         </div>
                     </div>
-                    
-                    <div className="p-2 border rounded max-h-60 overflow-y-auto">
-                        <h3 className="text-center font-semibold mb-2">المستويات والأفواج</h3>
-                        {stageDetails.levels.map(level => (
-                            <div key={level} className="mb-1 border-b dark:border-gray-600">
-                                <button type="button" onClick={() => setOpenLevel(openLevel === level ? null : level)} className="w-full text-right p-2 font-semibold flex justify-between items-center dark:text-gray-200">
-                                    <span>{level}</span>
-                                    <span className="text-xs">{openLevel === level ? '▲' : '▼'}</span>
-                                </button>
-                                {openLevel === level && (
-                                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-b-lg animate-fade-in">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <input
-                                                type="checkbox"
-                                                id={`level-check-${level}`}
-                                                checked={!!assignments[level]}
-                                                onChange={() => handleLevelToggle(level)}
-                                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
-                                            />
-                                            <label htmlFor={`level-check-${level}`} className="dark:text-gray-300">إسناد هذا المستوى</label>
-                                        </div>
-                                        {assignments[level] && (
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {CLASSES.map(cls => <button type="button" key={cls} onClick={() => handleClassToggle(level, cls)} className={`px-2 py-1 rounded-full text-xs ${assignments[level].includes(cls) ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>{cls}</button>)}
-                                            </div>
-                                        )}
+                    <div className="p-2 border rounded dark:border-gray-600">
+                        <h3 className="font-semibold text-center text-gray-700 dark:text-gray-200">{t('levels')}</h3>
+                        {stageLevels.map(level => (
+                            <div key={level} className="mt-2 p-2 bg-white dark:bg-gray-800 rounded">
+                                <label className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2"><input type="checkbox" checked={!!assignments[level]} onChange={() => handleLevelToggle(level)} /> {level}</label>
+                                {assignments[level] && (
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 pl-4 text-sm text-gray-700 dark:text-gray-300">
+                                        {CLASSES.map(cls => <label key={cls} className="flex items-center gap-1"><input type="checkbox" checked={assignments[level].includes(cls)} onChange={() => handleClassToggle(level, cls)} /> {cls}</label>)}
                                     </div>
                                 )}
                             </div>
                         ))}
                     </div>
-
-                    <div className="flex gap-2">
-                        <button type="submit" className="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600">{editingTeacher ? t('updateTeacher') : t('addTeacher')}</button>
-                        <button type="button" onClick={() => { setEditingTeacher(null); setIsFormVisible(false); }} className="flex-1 bg-gray-300 font-bold py-2 rounded-lg hover:bg-gray-400">{t('cancel')}</button>
+                    <div className="flex gap-2 pt-2">
+                        <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">{editingTeacher ? t('update') : t('add')}</button>
+                        {editingTeacher && <button type="button" onClick={() => setEditingTeacher(null)} className="flex-1 bg-gray-300 dark:bg-gray-600 py-2 rounded-lg">{t('cancel')}</button>}
                     </div>
                 </form>
-            )}
 
-            <div className="max-h-96 overflow-y-auto space-y-2">
-                {isLoading ? <p>Loading...</p> : teachers.map(teacher => (
-                    <div key={teacher.id} className="bg-gray-100 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">{teacher.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Code: {teacher.loginCode}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setEditingTeacher(teacher)} className="text-blue-600 hover:underline text-sm">{t('edit')}</button>
-                                <button onClick={() => setTeacherToDelete(teacher)} className="text-red-500 hover:underline text-sm">{t('delete')}</button>
+                {/* List Section */}
+                 <div className="max-h-[75vh] overflow-y-auto space-y-3 p-2">
+                     <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('existingTeachers')}</h2>
+                    {isLoading ? <p className="text-center dark:text-gray-300">{t('loading' as any)}...</p> : teachers.map(teacher => (
+                        <div key={teacher.id} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">{teacher.name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{teacher.subjects.map(s => t(s as any)).join(', ')} - Code: {teacher.loginCode}</p>
+                            <div className="flex gap-4 mt-2">
+                                <button onClick={() => setEditingTeacher(teacher)} className="text-sm font-semibold text-blue-600 hover:underline">{t('edit')}</button>
+                                <button onClick={() => handleDeleteTeacher(teacher.id)} className="text-sm font-semibold text-red-600 hover:underline">{t('delete')}</button>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
             <div className="mt-8 flex items-center gap-4">
-                <div className="w-1/2">
-                    <BackButton onClick={onBack} />
-                </div>
-                <div className="w-1/2">
-                    <LogoutButton onClick={onLogout} />
-                </div>
+                <BackButton onClick={onBack} />
+                <LogoutButton onClick={onLogout} />
             </div>
         </div>
     );

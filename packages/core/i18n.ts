@@ -1,264 +1,177 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+import i18n from 'i18next';
+import { initReactI18next, useTranslation as useOriginalTranslation } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 import { Language } from './types';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-type Translations = { [key: string]: string | Translations };
-
-const translations: { [key in Language]: Translations } = {
+// Minimal translations gathered from component usage
+const resources = {
   ar: {
-    // General
-    back: 'الرجوع',
-    logout: 'تسجيل الخروج',
-    next: 'التالي',
-    save: 'حفظ',
-    delete: 'حذف',
-    edit: 'تعديل',
-    cancel: 'إلغاء',
-    add: 'إضافة',
-    confirm: 'تأكيد',
-    close: 'إغلاق',
-    loading: 'جار التحميل',
-    all: 'الكل',
-    later: 'لاحقاً',
-    send: 'إرسال',
-    searchPlaceholder: 'ابحث في {schoolName}...',
-    noResultsFound: 'لم يتم العثور على نتائج.',
-    student: 'تلميذ',
-    teacher: 'أستاذ',
-    announcement: 'إعلان',
-    summary: 'ملخص',
-    exercise: 'تمرين',
-    note: 'ملاحظة',
-    educationalTip: 'نصيحة تربوية',
-    project: 'مشروع',
-    quiz: 'اختبار',
-    libraryItem: 'عنصر مكتبة',
-    supplementaryLesson: 'درس دعم',
-    
-    // Roles
-    teacher_feature: 'ميزات الأستاذ',
-    guardian_feature: 'ميزات ولي الأمر',
-    principal_feature: 'ميزات المدير',
-    
-    // Login Screen
-    unifiedLoginWelcome: 'مرحبا بكم في مدرستكم',
-    unifiedLoginPrompt: 'المرجو إدخال الرمز السري الخاص بكم',
-    loginCodePlaceholder: 'أدخل الرمز هنا',
-    login: 'دخول',
-    rememberMe: 'تذكرني',
-    requestHelp: 'هل تحتاج إلى مساعدة؟ اتصل بنا',
-    helpNote: 'هذا الرقم مخصص للدعم الفني فقط.',
-    invalidCode: 'الرمز الذي أدخلته غير صحيح. يرجى المحاولة مرة أخرى.',
-    rlsLoginError: "خطأ في تسجيل الدخول. يرجى التواصل مع الدعم الفني.",
-    supabaseEmailConfirmationError: "خطأ: لم يتم تأكيد البريد الإلكتروني. يرجى التواصل مع الدعم الفني.",
-    supabaseSignupsDisabledError: "خطأ: التسجيل معطل حاليا. تواصل مع الدعم الفني.",
-    rlsInsertError: "فشل الحفظ. يرجى التأكد من أن سياسات الأمان (RLS) في حسابك على Supabase تسمح للمدير بإضافة (INSERT) مستخدمين جدد في هذا الجدول.",
-    
-    // Maintenance Screen
-    maintenanceTitle: 'تحت الصيانة',
-    maintenanceMessage: 'التطبيق قيد الصيانة حاليًا. سنعود قريبًا.',
-
-    // Super Admin
-    superAdminDashboardTitle: 'لوحة تحكم المدير الخارق',
-    addSchoolSectionTitle: 'إضافة مدرسة جديدة',
-    newSchoolNamePlaceholder: 'اسم المدرسة الجديدة',
-    principalSecretCodePlaceholder: 'الرمز السري للمدير',
-    addSchool: 'إضافة المدرسة',
-    currentSchools: 'المدارس الحالية',
-    principalCodeLabel: 'رمز المدير',
-    noSchoolsAdded: 'لم تتم إضافة أي مدارس بعد.',
-    enterSchoolNameAndCode: 'الرجاء إدخال اسم المدرسة ورمز المدير.',
-    rlsNoticeTitle: 'تنبيه هام بخصوص أمان الوصول للبيانات (RLS)',
-    rlsNoticeBody1: 'يتم حاليًا تطوير وتنفيذ سياسات أمان الوصول على مستوى الصف (Row Level Security) في قاعدة البيانات Supabase.',
-    rlsNoticeBody2: 'الهدف هو ضمان أن كل مستخدم (مدير، أستاذ، ولي أمر) يمكنه الوصول فقط إلى البيانات المتعلقة بمدرسته أو بأبنائه. هذا يمنع أي وصول غير مصرح به إلى بيانات المدارس الأخرى.',
-    rlsNoticeBody3: 'للتأكد من أن تسجيل الدخول يعمل بشكل صحيح بعد تفعيل هذه السياسات، يجب تعيين دور <code>supabase_admin</code> للمستخدم <code>postgres</code>. يمكن القيام بذلك عبر تنفيذ الأمر SQL التالي في محرر Supabase SQL: <code>GRANT supabase_admin TO postgres;</code>',
-    feedbackAnalysis: 'تحليل الملاحظات والشكاوى',
-    schoolStatus: 'حالة المدرسة',
-    active: 'نشطة',
-    inactive: 'غير نشطة',
-    enterAsPrincipal: 'الدخول كمدير',
-    enterPrincipalDashboard: 'دخول لوحة تحكم {stageName}',
-    managePrincipals: 'إدارة المديرين',
-    principalManagementForStage: 'إدارة مديري {stageName}',
-    principalName: 'اسم المدير',
-    changePassword: 'تغيير كلمة المرور',
-    newPassword: 'كلمة المرور الجديدة',
-    savePassword: 'حفظ كلمة المرور',
-    featureToggleTitle: 'تفعيل الميزات',
-    principalFeaturesSection: 'ميزات المدير',
-    teacherFeaturesSection: 'ميزات الأستاذ',
-    guardianFeaturesSection: 'ميزات ولي الأمر',
-    saveChanges: 'حفظ التغييرات',
-    
-    // Principal
-    selectStage: 'اختر المرحلة التعليمية',
-    principalWelcome: 'مرحبا بك أيها المدير(ة)',
-    principalDashboardTitle: 'لوحة تحكم المدير',
-    dashboard: 'لوحة التحكم',
-    changeStage: 'تغيير المرحلة',
-    statisticsDashboard: 'لوحة الإحصائيات',
-    educationalTips: 'نصائح تربوية',
-    announcements: 'الإعلانات',
-    complaintsAndSuggestions: 'الشكاوى والاقتراحات',
-    reviewNotes: 'مراجعة الملاحظات',
-    reviewAlbumPhotos: 'مراجعة صور الألبوم',
-    monthlyFees: 'الرسوم الشهرية',
-    interviewRequests: 'طلبات المقابلة',
-    schoolManagement: 'إدارة المؤسسة',
-    browseAsTeacher: 'التصفح كأستاذ',
-    financialManagement: 'الإدارة المالية',
-    manageStudents: 'إدارة التلاميذ',
-    manageTeachers: 'إدارة الأساتذة',
-    addStudent: 'إضافة تلميذ',
-    addTeacher: 'إضافة أستاذ',
-    teacherName: 'اسم الأستاذ',
-    studentName: 'اسم التلميذ',
-    guardianCode: 'رمز ولي الأمر',
-    loginCode: 'رمز الدخول',
-    noStudents: 'لا يوجد تلاميذ في هذا القسم.',
-    updateTeacher: 'تحديث الأستاذ',
-    salaryOptional: 'الراتب (اختياري)',
-    
-    // Teacher
-    teacherDashboardTitle: 'لوحة تحكم الأستاذ',
-    teacherSelectLevelAndSubject: 'المرجو اختيار المستوى والمادة',
-    level: 'المستوى',
-    subject: 'المادة',
-    class: 'القسم',
-    selectClassPrompt: 'اختر القسم',
-    summaries: 'الملخصات',
-    exercises: 'التمارين',
-    notesAndAbsences: 'الملاحظات والغياب',
-    aiNotes: 'ملاحظات بالذكاء الاصطناعي',
-    lessonPlanner: 'مخطط الدروس',
-    memorizationHelper: 'مساعد الحفظ',
-    talkingCards: 'البطاقات الناطقة',
-    classAlbum: 'ألبوم القسم',
-    fillAllFields: 'المرجو ملء جميع الحقول.',
-    
-    // Guardian
-    guardianDashboardTitle: 'لوحة تحكم ولي الأمر',
-    discoverPleasureOfLearning: 'اكتشف متعة التعلم',
-    selectSubjectToFollow: 'اختر المادة للمتابعة',
-    studentLevel: 'المستوى الدراسي',
-    notifications: 'الإشعارات',
-    noNewNotifications: 'لا توجد إشعارات جديدة',
-    viewAnnouncements: 'عرض الإعلانات',
-    viewEducationalTips: 'عرض النصائح التربوية',
-    submitComplaintOrSuggestion: 'تقديم شكوى أو اقتراح',
-    requestInterview: 'طلب مقابلة',
-    guardianNotesTitle: 'ملاحظات وغيابات التلميذ(ة)',
-    sentForReviewSuccess: 'تم إرسال الملاحظة للمراجعة بنجاح.',
-    studentGrades: 'نقط التلاميذ',
-    examProgram: 'برنامج الفروض',
-    
-    // Subjects
-    "اللغة العربية": "اللغة العربية",
-    "اللغة الفرنسية": "اللغة الفرنسية",
-    "الرياضيات": "الرياضيات",
-    "التربية الإسلامية": "التربية الإسلامية",
-    "الاجتماعيات": "الاجتماعيات",
-    "اللغة الإنجليزية": "اللغة الإنجليزية",
-    "الفيزياء والكيمياء": "الفيزياء والكيمياء",
-    "علوم الحياة والأرض": "علوم الحياة والأرض",
-    "المعلوميات": "المعلوميات",
-    "الفلسفة": "الفلسفة",
-    
-    // Stages
-    pre_schoolStage: 'التعليم الأولي',
-    primaryStage: 'المرحلة الابتدائية',
-    middleStage: 'المرحلة الإعدادية',
-    highStage: 'المرحلة الثانوية',
+    translation: {
+      back: 'رجوع',
+      logout: 'تسجيل الخروج',
+      guardianDashboardTitle: 'لوحة تحكم ولي الأمر',
+      studentLevel: 'المستوى',
+      selectSubjectToFollow: 'اختر المادة للمتابعة',
+      memorizationHelper: 'مساعد الحفظ',
+      login: 'دخول',
+      invalidCode: 'الرمز الذي أدخلته غير صحيح.',
+      rlsLoginError: 'خطأ في تسجيل الدخول. قد تكون سياسة RLS مفقودة أو غير صحيحة.',
+      supabaseEmailConfirmationError: 'خطأ في Supabase: لم يتم تأكيد البريد الإلكتروني. يرجى مراجعة الإدارة.',
+      supabaseSignupsDisabledError: 'خطأ في Supabase: التسجيل معطل حالياً. يرجى مراجعة الإدارة.',
+      unifiedLoginWelcome: 'مرحبا بكم في منصة إمتياز',
+      unifiedLoginPrompt: 'المرجو إدخال الرمز الخاص بكم للولوج',
+      loginCodePlaceholder: 'أدخل الرمز هنا',
+      rememberMe: 'تذكرني',
+      requestHelp: 'هل تحتاج إلى مساعدة؟',
+      helpNote: 'اتصل بإدارة المدرسة للحصول على رمزك',
+      maintenanceTitle: 'المنصة في صيانة',
+      maintenanceMessage: 'المنصة حاليا متوقفة للصيانة. نعتذر عن الإزعاج.',
+      notifications: 'الإشعارات',
+      noNewNotifications: 'لا توجد إشعارات جديدة.',
+      summaries: 'الملخصات',
+      exercises: 'التمارين',
+      notes: 'الملاحظات',
+      studentGrades: 'نقط التلاميذ',
+      examProgram: 'برنامج الفروض',
+      personalizedExercises: 'تمارين مخصصة',
+      supplementaryLessons: 'دروس الدعم',
+      unifiedAssessments: 'الامتحانات الموحدة',
+      timetable: 'جدول الحصص',
+      quizzes: 'الروائز',
+      unitProject: 'مشروع الوحدة',
+      digitalLibrary: 'المكتبة الرقمية',
+      classAlbum: 'ألبوم القسم',
+      talkingCards: 'البطاقات الناطقة',
+      monthlyFees: 'الرسوم الشهرية',
+      viewAnnouncements: 'عرض الإعلانات',
+      viewEducationalTips: 'عرض النصائح التربوية',
+      submitComplaintOrSuggestion: 'تقديم شكوى أو اقتراح',
+      requestInterview: 'طلب مقابلة',
+      "PRE_SCHOOL": "التعليم الأولي",
+      "PRIMARY": "المرحلة الابتدائية",
+      "MIDDLE": "المرحلة الإعدادية",
+      "HIGH": "المرحلة الثانوية",
+      'pre_schoolStage': 'التعليم الأولي',
+      'primaryStage': 'المرحلة الابتدائية',
+      'middleStage': 'المرحلة الإعدادية',
+      'highStage': 'المرحلة الثانوية',
+      'اللغة العربية': 'اللغة العربية',
+      'اللغة الفرنسية': 'اللغة الفرنسية',
+      'الرياضيات': 'الرياضيات',
+      'التربية الإسلامية': 'التربية الإسلامية',
+      'الاجتماعيات': 'الاجتماعيات',
+      'اللغة الإنجليزية': 'اللغة الإنجليزية',
+      'الفيزياء والكيمياء': 'الفيزياء والكيمياء',
+      'علوم الحياة والأرض': 'علوم الحياة والأرض',
+      'المعلوميات': 'المعلوميات',
+      'الفلسفة': 'الفلسفة',
+      teacher: 'أستاذ',
+      guardian: 'ولي الأمر',
+      principal: 'مدير',
+      super_admin: 'مدير خارق',
+      add: 'إضافة',
+      edit: 'تعديل',
+      delete: 'حذف',
+      update: 'تحديث',
+      cancel: 'إلغاء',
+      teacherName: 'اسم الأستاذ(ة)',
+      loginCode: 'الرمز السري',
+      subject: 'المادة',
+      levels: 'المستويات',
+      classes: 'الأفواج',
+      fillAllFields: 'المرجو ملء جميع الحقول المطلوبة.',
+      confirmDeleteTeacher: 'هل أنت متأكد من أنك تريد حذف الأستاذ(ة) {{name}}؟',
+      addTeacher: 'إضافة أستاذ(ة)',
+      existingTeachers: 'الأساتذة الحاليون',
+      loading: 'جاري التحميل',
+      manageTeachers: 'تدبير الأساتذة',
+      manageStudents: 'تدبير التلاميذ',
+      addStudent: 'إضافة تلميذ(ة)',
+      studentName: 'اسم التلميذ(ة)',
+      guardianCode: 'رمز ولي الأمر',
+      existingStudents: 'التلاميذ الحاليون',
+      confirmDeleteStudent: 'هل أنت متأكد من أنك تريد حذف التلميذ(ة) {{name}}؟',
+    }
   },
   fr: {
-    // Basic translations for French
-    back: 'Retour',
-    logout: 'Déconnexion',
-    next: 'Suivant',
-    save: 'Enregistrer',
-    delete: 'Supprimer',
-    login: 'Connexion',
-    teacherDashboardTitle: 'Tableau de bord de l\'enseignant',
-    guardianDashboardTitle: 'Tableau de bord du parent',
-    principalDashboardTitle: 'Tableau de bord du directeur',
-    // ... etc
+    translation: {
+      back: 'Retour',
+      logout: 'Déconnexion',
+      // ... more keys
+    }
   },
   en: {
-    // Basic translations for English
-    back: 'Back',
-    logout: 'Logout',
-    next: 'Next',
-    save: 'Save',
-    delete: 'Delete',
-    login: 'Login',
-    teacherDashboardTitle: 'Teacher Dashboard',
-    guardianDashboardTitle: 'Guardian Dashboard',
-    principalDashboardTitle: 'Principal Dashboard',
-    // ... etc
-  },
+    translation: {
+      back: 'Back',
+      logout: 'Logout',
+      // ... more keys
+    }
+  }
 };
 
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'ar',
+    debug: false,
+    interpolation: {
+      escapeValue: false, // React already safes from xss
+    },
+    detection: {
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
+    },
+  });
 
-type TranslationContextType = {
+interface LanguageContextType {
   language: Language;
-  setLanguage: (language: Language) => void;
-  t: (key: string, options?: { [key: string]: string | number }) => string;
-};
+  setLanguage: (lang: Language) => void;
+  t: (key: string, options?: any) => string;
+}
 
-const LanguageContext = createContext<TranslationContextType | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('ar');
+  const { t, i18n: i18nInstance } = useOriginalTranslation();
+  const [language, setLanguageState] = useState<Language>(() => (i18nInstance.language as Language) || 'ar');
 
   useEffect(() => {
-    const savedLang = localStorage.getItem('language') as Language;
-    if (savedLang && ['ar', 'fr', 'en'].includes(savedLang)) {
-      setLanguageState(savedLang);
-    }
-  }, []);
+    const handleLanguageChanged = (lng: string) => {
+        const lang = lng.split('-')[0] as Language;
+        setLanguageState(lang);
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    };
+    i18nInstance.on('languageChanged', handleLanguageChanged);
+    // Initial setup
+    handleLanguageChanged(i18nInstance.language);
+
+    return () => {
+        i18nInstance.off('languageChanged', handleLanguageChanged);
+    };
+  }, [i18nInstance]);
 
   const setLanguage = (lang: Language) => {
-    localStorage.setItem('language', lang);
-    setLanguageState(lang);
-    if (lang === 'ar') {
-        document.documentElement.dir = 'rtl';
-    } else {
-        document.documentElement.dir = 'ltr';
-    }
-  };
-  
-   useEffect(() => {
-     if (language === 'ar') {
-        document.documentElement.dir = 'rtl';
-     } else {
-        document.documentElement.dir = 'ltr';
-     }
-   }, [language]);
-
-  const t = (key: string, options?: { [key: string]: string | number }): string => {
-    const langTranslations = translations[language];
-    let translation = key.split('.').reduce((obj, keyPart) => {
-        if (obj && typeof obj === 'object' && keyPart in obj) {
-            return (obj as any)[keyPart];
-        }
-        return undefined;
-    }, langTranslations as any) || key;
-
-    if (typeof translation === 'string' && options) {
-      Object.keys(options).forEach(optionKey => {
-        translation = translation.replace(`{${optionKey}}`, String(options[optionKey]));
-      });
-    }
-
-    return String(translation); // Ensure it's always a string
+    i18nInstance.changeLanguage(lang);
   };
 
-  return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t } }, children);
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
 };
 
-export const useTranslation = (): TranslationContextType => {
+export const useTranslation = (): LanguageContextType => {
   const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useTranslation must be used within a LanguageProvider');
   }
   return context;
 };
+
+export default i18n;

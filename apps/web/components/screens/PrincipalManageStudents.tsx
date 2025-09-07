@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, EducationalStage, School, Grade, Subject } from '../../../../packages/core/types';
-import { STAGE_DETAILS, CLASSES, getBlankGrades } from '../../../../packages/core/constants';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { School, Student, EducationalStage } from '../../../../packages/core/types';
+import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
 import { supabase } from '../../../../packages/core/supabaseClient';
 import { camelToSnakeCase, snakeToCamelCase } from '../../../../packages/core/utils';
-import BackButton from '../common/BackButton';
-import LogoutButton from '../common/LogoutButton';
-import LanguageSwitcher from '../common/LanguageSwitcher';
-import ThemeSwitcher from '../common/ThemeSwitcher';
-import ConfirmationModal from '../common/ConfirmationModal';
+import BackButton from '../../../../packages/ui/BackButton';
+import LogoutButton from '../../../../packages/ui/LogoutButton';
+import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
+import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 
 interface PrincipalManageStudentsProps {
     school: School;
@@ -23,18 +23,18 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const { t } = useTranslation();
     const [students, setStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isFormVisible, setIsFormVisible] = useState(false);
-    const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
+    const stageLevels = STAGE_DETAILS[stage].levels;
+    
     // Form state
     const [name, setName] = useState('');
     const [guardianCode, setGuardianCode] = useState('');
-    const [level, setLevel] = useState<string>(STAGE_DETAILS[stage].levels[0]);
+    const [level, setLevel] = useState<string>(stageLevels[0]);
     const [studentClass, setStudentClass] = useState<string>(CLASSES[0]);
 
     // Filter state
-    const [filterLevel, setFilterLevel] = useState<string>(STAGE_DETAILS[stage].levels[0]);
-    const [filterClass, setFilterClass] = useState<string>('all');
+    const [filterLevel, setFilterLevel] = useState<string>(stageLevels[0]);
+    const [filterClass, setFilterClass] = useState<string>(CLASSES[0]);
 
     const fetchStudents = useCallback(async () => {
         setIsLoading(true);
@@ -45,7 +45,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
             .eq('stage', stage);
         
         if (error) {
-            console.error("Error fetching students:", error);
+            console.error("Error fetching students", error);
         } else {
             setStudents(snakeToCamelCase(data));
         }
@@ -55,82 +55,47 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     useEffect(() => {
         fetchStudents();
     }, [fetchStudents]);
-
+    
     const resetForm = () => {
         setName('');
         setGuardianCode('');
-        setLevel(STAGE_DETAILS[stage].levels[0]);
-        setStudentClass(CLASSES[0]);
     };
 
-    const handleAddStudent = async (e: React.FormEvent) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !guardianCode.trim()) {
-            alert(t('fillAllFields'));
-            return;
-        }
-
-        const grades: { [key in Subject]?: Grade[] } = {};
-        STAGE_DETAILS[stage].subjects.forEach(subject => {
-            grades[subject] = getBlankGrades(subject);
-        });
-
-        const newStudentData = {
-            school_id: school.id,
-            name,
-            guardian_code: guardianCode,
-            stage,
-            level,
-            class: studentClass,
-            grades,
-        };
-        
-        const { error } = await supabase.from('students').insert(camelToSnakeCase(newStudentData));
-
-        if (error) {
-            if (error.message.includes('violates row-level security policy')) {
-                alert(t('rlsInsertError'));
+        if (name.trim() && guardianCode.trim() && level && studentClass) {
+            const { error } = await supabase.from('students').insert([
+                camelToSnakeCase({ name, guardianCode, stage, level, class: studentClass, schoolId: school.id, grades: {} })
+            ]);
+            
+            if(error) {
+                alert('Error adding student: ' + error.message);
             } else {
-                alert('Failed to add student: ' + error.message);
+                resetForm();
+                fetchStudents(); // Refresh
             }
         } else {
-            await fetchStudents();
-            resetForm();
-            setIsFormVisible(false);
+            alert(t('fillAllFields' as any));
         }
     };
     
-    const handleDelete = async () => {
-        if (!studentToDelete) return;
-
-        const { error } = await supabase
-            .from('students')
-            .delete()
-            .match({ id: studentToDelete.id });
-        
-        if (error) {
-            alert('Failed to delete student: ' + error.message);
-        } else {
-            setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+    const handleDelete = async (studentId: string) => {
+        if(window.confirm(t('confirmDeleteStudent' as any, { name: students.find(s=>s.id === studentId)?.name }))){
+            const { error } = await supabase.from('students').delete().match({ id: studentId });
+            if(error) {
+                alert('Error deleting student: ' + error.message);
+            } else {
+                fetchStudents();
+            }
         }
-        setStudentToDelete(null);
     };
 
     const filteredStudents = useMemo(() => {
-        return students
-            .filter(s => s.level === filterLevel && (filterClass === 'all' || s.class === filterClass))
-            .sort((a, b) => a.name.localeCompare(b.name));
+        return students.filter(s => s.level === filterLevel && s.class === filterClass);
     }, [students, filterLevel, filterClass]);
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-slate-700 w-full relative">
-            <ConfirmationModal
-                isOpen={!!studentToDelete}
-                title={`${t('delete')} ${studentToDelete?.name}`}
-                message={`هل أنت متأكد من رغبتك في حذف التلميذ؟ لا يمكن التراجع عن هذا الإجراء.`}
-                onConfirm={handleDelete}
-                onCancel={() => setStudentToDelete(null)}
-            />
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
@@ -140,67 +105,50 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6">{t('manageStudents')}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('manageStudents')}</h1>
             
-            {!isFormVisible && (
-                <button 
-                    onClick={() => setIsFormVisible(true)}
-                    className="w-full bg-blue-600 text-white font-bold py-3 mb-6 rounded-lg hover:bg-blue-700 transition"
-                >
-                    + {t('addStudent')}
-                </button>
-            )}
-
-            {isFormVisible && (
-                <form onSubmit={handleAddStudent} className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
-                    <h2 className="text-xl font-semibold text-center text-gray-700 dark:text-gray-200">{t('addStudent')}</h2>
-                    <input type="text" placeholder={t('studentName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded" />
-                    <input type="text" placeholder={t('guardianCode')} value={guardianCode} onChange={e => setGuardianCode(e.target.value)} required className="w-full p-2 border rounded" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {/* Form Section */}
+                <form onSubmit={handleAdd} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
+                    <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
+                    <input type="text" placeholder={t('studentName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                    <input type="text" placeholder={t('guardianCode')} value={guardianCode} onChange={e => setGuardianCode(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
                     <div className="flex gap-2">
-                         <select value={level} onChange={e => setLevel(e.target.value)} className="w-1/2 p-2 border rounded">
-                            {STAGE_DETAILS[stage].levels.map(l => <option key={l} value={l}>{l}</option>)}
+                        <select value={level} onChange={e => setLevel(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                            {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-1/2 p-2 border rounded">
+                        <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
-                    <div className="flex gap-2">
-                        <button type="submit" className="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600">{t('save')}</button>
-                        <button type="button" onClick={() => setIsFormVisible(false)} className="flex-1 bg-gray-300 font-bold py-2 rounded-lg hover:bg-gray-400">{t('cancel')}</button>
-                    </div>
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('add')}</button>
                 </form>
-            )}
 
-            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="flex gap-2 mb-4">
-                     <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="flex-1 p-2 border rounded">
-                        {STAGE_DETAILS[stage].levels.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                    <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="flex-1 p-2 border rounded">
-                        <option value="all">{t('all')}</option>
-                        {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
-                 <div className="max-h-80 overflow-y-auto space-y-2">
-                    {isLoading ? <p>Loading...</p> : filteredStudents.length > 0 ? filteredStudents.map(student => (
-                        <div key={student.id} className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">{student.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Code: {student.guardianCode}</p>
+                 {/* List Section */}
+                 <div>
+                    <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center mb-3">{t('existingStudents')}</h2>
+                    <div className="flex gap-2 mb-3">
+                        <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                            {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                     <div className="max-h-[60vh] overflow-y-auto space-y-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                        {isLoading ? <p className="dark:text-gray-300">{t('loading' as any)}...</p> : filteredStudents.map(student => (
+                            <div key={student.id} className="bg-white dark:bg-gray-800 p-2 rounded shadow-sm flex justify-between items-center">
+                                <span className="text-gray-800 dark:text-gray-200">{student.name}</span>
+                                <button onClick={() => handleDelete(student.id)} className="text-sm text-red-600">{t('delete')}</button>
                             </div>
-                            <button onClick={() => setStudentToDelete(student)} className="text-red-500 hover:text-red-700 font-bold px-3 py-1 text-sm">{t('delete')}</button>
-                        </div>
-                    )) : <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('noStudents')}</p>}
+                        ))}
+                    </div>
                 </div>
             </div>
 
             <div className="mt-8 flex items-center gap-4">
-                <div className="w-1/2">
-                    <BackButton onClick={onBack} />
-                </div>
-                <div className="w-1/2">
-                    <LogoutButton onClick={onLogout} />
-                </div>
+                <BackButton onClick={onBack} />
+                <LogoutButton onClick={onLogout} />
             </div>
         </div>
     );
