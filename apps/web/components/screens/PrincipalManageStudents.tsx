@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { School, Student, EducationalStage } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
@@ -22,9 +22,10 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const { t } = useTranslation();
     const [students, setStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    const stageLevels = STAGE_DETAILS[stage].levels;
     
+    const stageDetails = STAGE_DETAILS[stage];
+    const stageLevels = stageDetails.levels;
+
     // Form state
     const [name, setName] = useState('');
     const [guardianCode, setGuardianCode] = useState('');
@@ -34,6 +35,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     // Filter state
     const [filterLevel, setFilterLevel] = useState<string>(stageLevels[0]);
     const [filterClass, setFilterClass] = useState<string>(CLASSES[0]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const fetchStudents = useCallback(async () => {
         setIsLoading(true);
@@ -58,30 +60,40 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const resetForm = () => {
         setName('');
         setGuardianCode('');
+        setLevel(stageLevels[0]);
+        setStudentClass(CLASSES[0]);
     };
 
-    const handleAdd = async (e: React.FormEvent) => {
+    const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (name.trim() && guardianCode.trim() && level && studentClass) {
-            const { error } = await supabase.from('students').insert([
-                camelToSnakeCase({ name, guardianCode, stage, level, class: studentClass, schoolId: school.id })
-            ]);
+            const studentData = {
+                name,
+                guardian_code: guardianCode,
+                stage,
+                level,
+                class: studentClass,
+                grades: {},
+                school_id: school.id,
+            };
             
-            if(error) {
-                alert('Error adding student: ' + error.message);
+            const { error } = await supabase.from('students').insert([studentData]);
+            
+            if (error) {
+                alert('Error saving student: ' + error.message);
             } else {
                 resetForm();
-                fetchStudents(); // Refresh
+                fetchStudents();
             }
         } else {
             alert(t('fillAllFields' as any));
         }
     };
-    
-    const handleDelete = async (studentId: string) => {
-        if(window.confirm(t('confirmDeleteStudent' as any, { name: students.find(s=>s.id === studentId)?.name }))){
+
+    const handleDeleteStudent = async (studentId: string) => {
+        if (window.confirm(t('confirmDeleteStudent' as any, { name: students.find(s => s.id === studentId)?.name }))) {
             const { error } = await supabase.from('students').delete().match({ id: studentId });
-            if(error) {
+            if (error) {
                 alert('Error deleting student: ' + error.message);
             } else {
                 fetchStudents();
@@ -89,9 +101,9 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
         }
     };
 
-    const filteredStudents = useMemo(() => {
-        return students.filter(s => s.level === filterLevel && s.class === filterClass);
-    }, [students, filterLevel, filterClass]);
+    const filteredStudents = students
+        .filter(s => s.level === filterLevel && s.class === filterClass)
+        .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-slate-700 w-full relative">
@@ -107,40 +119,48 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('manageStudents')}</h1>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 {/* Form Section */}
-                <form onSubmit={handleAdd} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
-                    <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
+                {/* Form Section */}
+                <form onSubmit={handleAddStudent} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4">
+                     <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
                     <input type="text" placeholder={t('studentName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
                     <input type="text" placeholder={t('guardianCode')} value={guardianCode} onChange={e => setGuardianCode(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                    
                     <div className="flex gap-2">
-                        <select value={level} onChange={e => setLevel(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                        <select value={level} onChange={e => setLevel(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                             {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                         <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
-                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg">{t('add')}</button>
+                    
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">{t('addStudent')}</button>
                 </form>
 
-                 {/* List Section */}
-                 <div>
-                    <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center mb-3">{t('existingStudents')}</h2>
-                    <div className="flex gap-2 mb-3">
-                        <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                {/* List Section */}
+                 <div className="space-y-3 p-2">
+                     <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center mb-2">{t('existingStudents')}</h2>
+                     <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                             {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                         <select value={filterClass} onChange={e => setFilterClass(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
                             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
-                    </div>
-                     <div className="max-h-[60vh] overflow-y-auto space-y-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
-                        {isLoading ? <p className="dark:text-gray-300">{t('loading' as any)}...</p> : filteredStudents.map(student => (
-                            <div key={student.id} className="bg-white dark:bg-gray-800 p-2 rounded shadow-sm flex justify-between items-center">
-                                <span className="text-gray-800 dark:text-gray-200">{student.name}</span>
-                                <button onClick={() => handleDelete(student.id)} className="text-sm text-red-600">{t('delete')}</button>
+                     </div>
+                     <input type="text" placeholder={t('searchByName' as any)} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" />
+                     
+                    <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+                        {isLoading ? <p className="text-center dark:text-gray-300">{t('loading')}...</p> : filteredStudents.map(student => (
+                            <div key={student.id} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p className="font-bold text-gray-800 dark:text-gray-100">{student.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Code: {student.guardianCode}</p>
+                                </div>
+                                <button onClick={() => handleDeleteStudent(student.id)} className="text-sm font-semibold text-red-600 hover:underline">{t('delete')}</button>
                             </div>
                         ))}
+                         {!isLoading && filteredStudents.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('noStudentsInClass' as any)}</p>}
                     </div>
                 </div>
             </div>
