@@ -135,7 +135,9 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ schools, onAd
                                         )}
                                         <div>
                                             <p className="text-gray-800 dark:text-gray-100 font-medium">{school.name}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('principalCodeLabel')}: {Object.values(school.principals).flat().map(p => p.loginCode).join(', ')}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {t('principalCodeLabel')}: {school.principals ? Object.values(school.principals).flat().map(p => p.loginCode).join(', ') : ''}
+                                            </p>
                                         </div>
                                     </div>
                                 </button>

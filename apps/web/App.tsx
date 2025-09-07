@@ -125,9 +125,10 @@ const App: React.FC = () => {
             console.error("Error fetching schools:", error);
         } else {
             const schoolData = snakeToCamelCase(data) as School[];
-            // Initialize empty arrays for optional data to prevent runtime errors
+            // Initialize empty arrays/objects for optional data to prevent runtime errors
             const schoolsWithDefaults = schoolData.map(s => ({
                 ...s,
+                principals: s.principals || {}, // FIX: Ensure principals is an object
                 students: s.students || [],
                 teachers: s.teachers || [],
                 summaries: s.summaries || [],
