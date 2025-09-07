@@ -159,10 +159,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     i18nInstance.changeLanguage(lang);
   };
 
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+  return React.createElement(
+    LanguageContext.Provider,
+    { value: { language, setLanguage, t } },
+    children
   );
 };
 
