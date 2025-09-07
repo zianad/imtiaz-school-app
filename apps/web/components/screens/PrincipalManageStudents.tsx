@@ -27,18 +27,15 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const stageDetails = STAGE_DETAILS[stage];
     const stageLevels = stageDetails.levels;
 
-    // Form state
     const [name, setName] = useState('');
     const [guardianCode, setGuardianCode] = useState('');
     const [level, setLevel] = useState<string>(stageLevels[0]);
     const [studentClass, setStudentClass] = useState<string>(CLASSES[0]);
 
-    // Filter state
     const [filterLevel, setFilterLevel] = useState<string>(stageLevels[0]);
     const [filterClass, setFilterClass] = useState<string>(CLASSES[0]);
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Excel Import State
     const [isImporting, setIsImporting] = useState(false);
     const [importStatus, setImportStatus] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,25 +67,33 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     };
 
     const addStudentAndCreateGuardian = async (studentData: Omit<Student, 'id' | 'grades'>): Promise<{success: boolean, error?: string}> => {
-        // 1. Check if guardian code already exists for this school
         const { data: existingStudent, error: checkError } = await supabase
             .from('students')
             .select('id')
             .eq('school_id', school.id)
             .eq('guardian_code', studentData.guardianCode)
-            .single();
+            .maybeSingle();
 
-        if (checkError && checkError.code !== 'PGRST116') { // PGRST116: no rows found
-             console.error('Error checking guardian code:', checkError);
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is 'exact one row not found' which is fine
              return { success: false, error: checkError.message };
         }
         if (existingStudent) {
             return { success: false, error: t('guardianCodeInUseError', { code: studentData.guardianCode }) };
         }
 
-        // 2. Create the student record
+        // Create auth user first
+        const email = `${studentData.guardianCode}@${school.id}.com`;
+        const password = `ImtiazApp_${studentData.guardianCode}_S3cure!`;
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
+
+        if (signUpError || !authData.user) {
+            return { success: false, error: `Guardian login creation failed: ${signUpError?.message}` };
+        }
+        
+        // Then insert student profile
         const { error: insertError } = await supabase.from('students').insert([
             {
+                id: authData.user.id, // Use the auth user ID as the student's primary key
                 name: studentData.name,
                 guardian_code: studentData.guardianCode,
                 stage: studentData.stage,
@@ -99,19 +104,9 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
         ]);
         
         if (insertError) {
-             console.error('Error saving student:', insertError);
-             return { success: false, error: insertError.message };
-        }
-        
-        // 3. Create the guardian auth user
-        const email = `${studentData.guardianCode}@${school.id}.com`;
-        const password = `ImtiazApp_${studentData.guardianCode}_S3cure!`;
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
-
-        if (signUpError) {
-            console.error('Error creating guardian auth user:', signUpError);
-            // Optional: Implement rollback logic to delete the student record if auth creation fails
-            return { success: false, error: `Student created, but guardian login failed: ${signUpError.message}` };
+            // Rollback auth user creation if profile insert fails
+            await supabase.auth.admin.deleteUser(authData.user.id);
+            return { success: false, error: insertError.message };
         }
 
         return { success: true };
@@ -131,7 +126,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
 
             if (result.success) {
                 resetForm();
-                await fetchStudents(); // Refresh the list
+                await fetchStudents();
             } else {
                 alert(result.error || 'An unknown error occurred.');
             }
@@ -142,9 +137,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     
     const handleDeleteStudent = async (student: Student) => {
         if (window.confirm(t('confirmDeleteStudent', { name: student.name }))) {
-             // We might need to delete the auth user as well. This can be complex.
-             // For now, just delete the student record. The auth user remains but can't log in.
-             // A better solution would be a database function.
             const { error } = await supabase.from('students').delete().match({ id: student.id });
             if (error) {
                 alert('Error deleting student: ' + error.message);
@@ -182,7 +174,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                             name: String(studentName),
                             guardianCode: String(code),
                             stage: stage,
-                            level: filterLevel, // Use the selected filter level/class
+                            level: filterLevel,
                             class: filterClass
                         });
                         if (result.success) {
@@ -203,7 +195,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                 setImportStatus(t('importError'));
             } finally {
                 setIsImporting(false);
-                // Reset file input
                 if(fileInputRef.current) fileInputRef.current.value = "";
             }
         };
@@ -228,7 +219,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('manageStudents')}</h1>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Form Section */}
                 <div className="space-y-4">
                     <form onSubmit={handleAddStudent} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4">
                         <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
@@ -246,7 +236,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                         
                         <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">{t('addStudent')}</button>
                     </form>
-                     {/* Excel Import Section */}
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
                         <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('importFromExcel')}</h2>
                         <p className="text-xs text-center text-gray-500 dark:text-gray-400">{t('importExcelInstructions')}</p>
@@ -263,7 +252,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                     </div>
                 </div>
 
-                {/* List Section */}
                  <div className="space-y-3 p-2">
                      <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center mb-2">{t('existingStudents')}</h2>
                      <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">

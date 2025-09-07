@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Complaint, Student, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
@@ -8,65 +8,82 @@ import ReactMarkdown from 'react-markdown';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
 import { supabase } from '../../../../packages/core/supabaseClient';
 import { snakeToCamelCase } from '../../../../packages/core/utils';
+import { GoogleGenAI } from '@google/genai';
 
 interface PrincipalComplaintsProps {
     school: School;
-    onAnalyze: () => Promise<string>;
     onBack: () => void;
     onLogout: () => void;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
 }
 
-const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onAnalyze, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
+const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysis, setAnalysis] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
-    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const ai = new GoogleGenAI({apiKey: (import.meta as any).env.VITE_API_KEY as string});
+
+    const fetchComplaintsData = useCallback(async () => {
+        setIsLoading(true);
+        const { data: complaintsData, error: complaintsError } = await supabase
+            .from('complaints')
+            .select('*')
+            .eq('school_id', school.id)
+            .order('date', { ascending: false });
+
+        if (complaintsError) console.error("Error fetching complaints", complaintsError);
+        else setComplaints(snakeToCamelCase(complaintsData) as Complaint[]);
+
+        const { data: studentsData, error: studentsError } = await supabase
+            .from('students')
+            .select('id, name')
+            .eq('school_id', school.id);
+
+        if (studentsError) console.error("Error fetching students for complaints", studentsError);
+        else setStudents(snakeToCamelCase(studentsData) as Student[]);
+
+        setIsLoading(false);
+    }, [school.id]);
 
     useEffect(() => {
-        const fetchComplaintsData = async () => {
-            setIsDataLoading(true);
-            const { data: complaintsData, error: complaintsError } = await supabase
-                .from('complaints')
-                .select('*')
-                .eq('school_id', school.id)
-                .order('date', { ascending: false });
-
-            if (complaintsError) console.error("Error fetching complaints", complaintsError);
-            else setComplaints(snakeToCamelCase(complaintsData) as Complaint[]);
-
-            const { data: studentsData, error: studentsError } = await supabase
-                .from('students')
-                .select('id, name')
-                .eq('school_id', school.id);
-
-            if (studentsError) console.error("Error fetching students for complaints", studentsError);
-            else setStudents(snakeToCamelCase(studentsData) as Student[]);
-
-            setIsDataLoading(false);
-        };
         fetchComplaintsData();
-    }, [school.id]);
+    }, [fetchComplaintsData]);
     
     const getStudentName = (studentId: string) => {
         return students.find(s => s.id === studentId)?.name || 'Unknown Student';
     };
 
     const handleAnalyze = async () => {
-        setIsLoading(true);
+        setIsAnalyzing(true);
         setAnalysis('');
         setIsModalOpen(true);
+        if (complaints.length < 2) {
+            setAnalysis(t('noComplaintsToAnalyze'));
+            setIsAnalyzing(false);
+            return;
+        }
         try {
-            const result = await onAnalyze();
-            setAnalysis(result);
+            const prompt = `
+                Analyze the following complaints from parents. 
+                Summarize the main topics, identify recurring trends or problems, and suggest 3 practical, concrete solutions the school administration can implement.
+                The response must be in Arabic and in a well-structured report format.
+                Complaints:
+                ${complaints.map(c => `- ${c.content}`).join('\n')}
+            `;
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: prompt,
+            });
+            setAnalysis(response.text);
         } catch (e: any) {
             setAnalysis(t('noComplaintsToAnalyze'));
         } finally {
-            setIsLoading(false);
+            setIsAnalyzing(false);
         }
     };
     
@@ -74,7 +91,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onAna
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 text-center">{t('complaintAnalysis')}</h2>
-                {isLoading ? (
+                {isAnalyzing ? (
                     <div className="flex justify-center items-center h-48">
                         <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -112,7 +129,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onAna
             <div className="mb-6">
                 <button 
                     onClick={handleAnalyze} 
-                    disabled={complaints.length < 2 || isLoading}
+                    disabled={complaints.length < 2 || isAnalyzing}
                     className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-600 transition shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                     🧠 {t('analyzeComplaints')}
@@ -121,7 +138,7 @@ const PrincipalComplaints: React.FC<PrincipalComplaintsProps> = ({ school, onAna
 
             <div className="max-h-[60vh] overflow-y-auto space-y-4 p-2">
                 <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">{t('receivedComplaints')}</h2>
-                {isDataLoading ? <p className="text-center dark:text-gray-300">Loading...</p> : complaints.length > 0 ? complaints.map(c => (
+                {isLoading ? <p className="text-center dark:text-gray-300">Loading...</p> : complaints.length > 0 ? complaints.map(c => (
                     <div key={c.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg shadow-sm border-l-4 border-orange-500 dark:border-orange-400">
                         <p className="whitespace-pre-wrap mb-2 text-gray-800 dark:text-gray-200">{c.content}</p>
                         {c.image && <img src={c.image} alt="attachment" className="mt-2 rounded-lg max-w-full h-auto"/>}

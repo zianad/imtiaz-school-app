@@ -53,7 +53,7 @@ const TeacherStudentReportGeneration: React.FC<TeacherStudentReportGenerationPro
     };
 
     const getGradeSummary = () => {
-        const grades = student.grades[subject];
+        const grades = (student.grades || {})[subject];
         if (!grades || grades.every(g => g.score === null)) {
             return <p className="text-center text-gray-500 dark:text-gray-400">لا توجد نقاط لعرضها.</p>;
         }

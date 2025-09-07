@@ -25,7 +25,7 @@ const GuardianViewGrades: React.FC<GuardianViewGradesProps> = ({ student, subjec
         return <div>Error: Subject not selected.</div>;
     }
 
-    const grades = student.grades[subject] || [];
+    const grades = (student.grades || {})[subject] || [];
     const subSubjects = SUBJECT_MAP[subject] || [];
 
     const getGrade = (subSubject: string, semester: 1 | 2, assignment: 1 | 2): number | null => {
