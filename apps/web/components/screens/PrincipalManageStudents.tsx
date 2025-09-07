@@ -73,7 +73,6 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                 stage,
                 level,
                 class: studentClass,
-                grades: {},
                 school_id: school.id,
             };
             
