@@ -109,6 +109,8 @@ const App: React.FC = () => {
     const [selectedLevel, setSelectedLevel] = useState<string>('');
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
     const [selectedClass, setSelectedClass] = useState<string>('');
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [nextPageAfterStudentSelection, setNextPageAfterStudentSelection] = useState<Page | null>(null);
 
     const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
@@ -132,6 +134,8 @@ const App: React.FC = () => {
         setSelectedLevel('');
         setSelectedSubject(null);
         setSelectedClass('');
+        setSelectedStudent(null);
+        setNextPageAfterStudentSelection(null);
     }, []);
     
     const performLogout = useCallback(async () => {
@@ -145,11 +149,9 @@ const App: React.FC = () => {
 
     const fetchSchoolData = useCallback(async (schoolId: string): Promise<School | null> => {
         if (!isSupabaseConfigured) {
-            // Mock mode is simplified and doesn't need this change
             return null; 
         }
         try {
-            // Fetch only the essential data for establishing context
             const { data: schoolData, error: schoolError } = await supabase
                 .from('schools')
                 .select('*, principals(*), teachers(*)')
@@ -159,7 +161,6 @@ const App: React.FC = () => {
             if (schoolError) throw schoolError;
             if (!schoolData) return null;
             
-            // The rest of the data (students, notes, etc.) will be lazy-loaded by their respective components
             return snakeToCamelCase(schoolData) as School;
         } catch (error) {
             console.error('Error fetching initial school data:', error);
@@ -169,7 +170,6 @@ const App: React.FC = () => {
     
     const handleLogin = async (code: string) => {
         if (!isSupabaseConfigured) {
-            // Mock login logic remains for offline testing
             return;
         }
 
@@ -179,7 +179,6 @@ const App: React.FC = () => {
                 password: SUPER_ADMIN_PASSWORD,
             });
             if (error) throw new Error(error.message);
-            // onAuthStateChange will handle navigation
             return;
         }
 
@@ -240,7 +239,6 @@ const App: React.FC = () => {
                  throw new Error(signInError.message);
             }
         }
-         // onAuthStateChange will handle successful login
     };
     
     useEffect(() => {
@@ -301,7 +299,6 @@ const App: React.FC = () => {
                                     return;
                                 }
                                 
-                                // FIX: Add explicit type for `p` to resolve type inference issue.
                                 const principal = Object.values(fetchedSchool.principals || {}).flat().find((p: Principal) => p.loginCode === code);
                                 if (principal) {
                                     setUserRole(UserRole.Principal);
@@ -335,6 +332,25 @@ const App: React.FC = () => {
         processSession();
     }, [session, fetchSchoolData, resetAppState, performLogout]);
     
+    const handleTeacherActionNavigation = (nextPage: Page) => {
+      const pagesRequiringStudentSelection = [
+        Page.TeacherStudentSelection, // For grades
+        Page.TeacherGenerateReportCard, // For AI notes
+        Page.TeacherStudentSelectionForExercises // For personalized exercises
+      ];
+      
+      if (pagesRequiringStudentSelection.includes(nextPage)) {
+        let targetPage: Page;
+        if (nextPage === Page.TeacherStudentSelection) targetPage = Page.TeacherStudentGrades;
+        else if (nextPage === Page.TeacherGenerateReportCard) targetPage = Page.TeacherStudentReportGeneration;
+        else targetPage = Page.TeacherPersonalizedExercises; // This assumes TeacherStudentSelectionForExercises leads here
+        
+        setNextPageAfterStudentSelection(targetPage);
+        setPage(Page.TeacherStudentSelection);
+      } else {
+        setPage(nextPage);
+      }
+    };
     
     const renderPage = () => {
         if (!isSupabaseConfigured && (import.meta as any).env.PROD) {
@@ -346,7 +362,6 @@ const App: React.FC = () => {
         }
 
         if (userRole === UserRole.SuperAdmin) {
-            // Super Admin pages don't need lazy loading as they deal with basic school list
             switch (page) {
                 case Page.SuperAdminDashboard:
                     return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
@@ -359,8 +374,6 @@ const App: React.FC = () => {
             }
         }
 
-        // FIX: Replaced `userRole !== UserRole.SuperAdmin` with just `userRole` to fix a TypeScript type-narrowing error.
-        // The logic remains the same, as the SuperAdmin case is handled above. This ensures only logged-in, non-admin users see the maintenance screen for an inactive school.
         if (school && !school.isActive && userRole) {
             return <MaintenanceScreen onLogout={performLogout} />;
         }
@@ -370,7 +383,6 @@ const App: React.FC = () => {
                  if (!school || !currentUser) return null; 
                 switch (page) {
                     case Page.PrincipalStageSelection:
-                         // FIX: Add explicit type for `p` to resolve type inference issue.
                          const accessibleStages = Object.values(school.principals || {}).flat().filter((p: Principal) => p.id === (currentUser as Principal).id).map((p: Principal) => p.stage);
                         return <PrincipalStageSelection school={school} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
                     case Page.PrincipalDashboard:
@@ -380,7 +392,6 @@ const App: React.FC = () => {
                     case Page.PrincipalManageStudents:
                         return <PrincipalManageStudents school={school} stage={selectedStage!} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalManageTeachers:
-                        // FIX: Removed props that are now managed internally by the PrincipalManageTeachers component.
                         return <PrincipalManageTeachers school={school} stage={selectedStage!} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalFeeManagement:
                         return <PrincipalFeeManagement school={school} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateFees={() => {}} />;
@@ -410,34 +421,76 @@ const App: React.FC = () => {
 
             case UserRole.Teacher:
                  if (!school || !currentUser) return null;
+                 // FIX: The onLogout property was not defined in the teacherProps object. It has been corrected to use the performLogout function, which is available in the component's scope.
+                 const teacherProps = { school, toggleDarkMode, isDarkMode, onLogout: performLogout, teacher: currentUser as Teacher };
+                 const backToClassSelection = () => setPage(Page.TeacherClassSelection);
+                 const backToActionMenu = () => setPage(Page.TeacherActionMenu);
+                 
                  switch (page) {
                     case Page.TeacherDashboard:
-                        return <TeacherDashboard school={school} teacher={currentUser as Teacher} onSelectionComplete={(level, subject) => {setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection)}} onBack={performLogout} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <TeacherDashboard {...teacherProps} onSelectionComplete={(level, subject) => { setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection); }} onBack={performLogout} />;
                     case Page.TeacherClassSelection:
                         const classes = (currentUser as Teacher).assignments[selectedLevel] || [];
-                        return <TeacherClassSelection school={school} classes={classes} onSelectClass={(cls) => {setSelectedClass(cls); setPage(Page.TeacherActionMenu)}} onBack={() => setPage(Page.TeacherDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <TeacherClassSelection {...teacherProps} classes={classes} onSelectClass={(cls) => { setSelectedClass(cls); setPage(Page.TeacherActionMenu); }} onBack={() => setPage(Page.TeacherDashboard)} />;
                     case Page.TeacherActionMenu:
-                        return <TeacherActionMenu school={school} selectedLevel={selectedLevel} onSelectAction={setPage} onBack={() => setPage(Page.TeacherClassSelection)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-                    // ... other teacher screens will need refactoring for lazy loading
+                        return <TeacherActionMenu {...teacherProps} selectedLevel={selectedLevel} onSelectAction={handleTeacherActionNavigation} onBack={backToClassSelection} />;
+                    case Page.TeacherViewAnnouncements:
+                         return <TeacherViewAnnouncements {...teacherProps} announcements={[]} onBack={backToActionMenu}/>
+                    case Page.TeacherManageSummaries:
+                         return <TeacherContentForm {...teacherProps} type="summary" items={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} subject={selectedSubject!} />;
+                    case Page.TeacherManageExercises:
+                         return <TeacherContentForm {...teacherProps} type="exercise" items={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} subject={selectedSubject!} />;
+                    case Page.TeacherManageNotes:
+                         return <TeacherNotesForm {...teacherProps} students={[]} onSaveNote={() => {}} onMarkAbsent={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentSelection:
+                         return <TeacherStudentSelection {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(nextPageAfterStudentSelection!); }} onBack={backToActionMenu} title={t('selectStudent')} />;
+                    case Page.TeacherStudentGrades:
+                         return <TeacherStudentGrades {...teacherProps} student={selectedStudent!} subject={selectedSubject!} initialGrades={[]} onSave={() => {}} onBack={() => setPage(Page.TeacherStudentSelection)} />;
+                    case Page.TeacherManageExamProgram:
+                         return <TeacherExamProgramForm {...teacherProps} examPrograms={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherGenerateReportCard: // This is the selection screen
+                         return <TeacherGenerateReportCard {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(Page.TeacherStudentReportGeneration); }} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentReportGeneration:
+                         return <TeacherStudentReportGeneration {...teacherProps} student={selectedStudent!} subject={selectedSubject!} onGenerateComment={async () => "AI Comment"} onSendForReview={() => {}} onBack={() => setPage(Page.TeacherGenerateReportCard)} />;
+                    case Page.TeacherAddSupplementaryLesson:
+                        return <TeacherAddSupplementaryLesson {...teacherProps} subject={selectedSubject!} lessons={[]} onSave={()=>{}} onDelete={()=>{}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddUnifiedAssessment:
+                        return <TeacherAddUnifiedAssessment {...teacherProps} assessments={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddTimetable:
+                        return <TeacherAddTimetable {...teacherProps} timetables={[]} onSave={()=>{}} onDelete={()=>{}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddQuiz:
+                        return <TeacherAddQuiz {...teacherProps} quizzes={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddProject:
+                        return <TeacherAddProject {...teacherProps} projects={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddLibrary:
+                        return <TeacherAddLibrary {...teacherProps} libraryItems={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherLessonPlanner:
+                        return <TeacherLessonPlanner {...teacherProps} onGenerate={async () => "AI Lesson Plan"} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentSelectionForExercises:
+                        return <TeacherStudentSelection {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(Page.TeacherPersonalizedExercises); }} onBack={backToActionMenu} title={t('selectStudentForExercises')} />;
+                    case Page.TeacherPersonalizedExercises:
+                        return <TeacherPersonalizedExercises {...teacherProps} student={selectedStudent!} subject={selectedSubject!} onGenerate={async () => "AI Exercises"} onSave={() => {}} onBack={() => setPage(Page.TeacherStudentSelectionForExercises)} />;
+                    case Page.TeacherManageAlbum:
+                        return <TeacherManageAlbum {...teacherProps} photos={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherManageTalkingCards:
+                        return <TeacherManageTalkingCards {...teacherProps} cards={[]} onAnalyze={async () => []} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherManageMemorization:
+                        return <TeacherManageMemorization {...teacherProps} items={[]} onSave={() => {}} onDelete={() => {}} onExtractText={async () => "Extracted Text"} onBack={backToActionMenu} />;
                     default:
-                         return <TeacherDashboard school={school} teacher={currentUser as Teacher} onSelectionComplete={(level, subject) => {setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection)}} onBack={performLogout} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                         return <TeacherDashboard {...teacherProps} onSelectionComplete={(level, subject) => {setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection)}} onBack={performLogout} />;
                  }
             
             case UserRole.Guardian:
                 if (!school || !currentUser) return null;
                  switch (page) {
                     case Page.GuardianDashboard:
-                        // Notifications can be fetched here or inside the dashboard
                         return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.GuardianSubjectMenu:
                         return <GuardianSubjectMenu school={school} studentLevel={(currentUser as Student).level} subject={selectedSubject!} onSelectAction={setPage} onBack={()=>setPage(Page.GuardianDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.GuardianViewSummaries:
-                        // This component will now fetch its own data
                         return <GuardianViewContent type="summaries" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                     case Page.GuardianViewExercises:
-                         // This component will now fetch its own data
                         return <GuardianViewContent type="exercises" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-                     // ... other guardian screens will need refactoring
                      default:
                         return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                  }

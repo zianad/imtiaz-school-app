@@ -93,12 +93,26 @@ const resources = {
       guardianCode: 'رمز ولي الأمر',
       existingStudents: 'التلاميذ الحاليون',
       confirmDeleteStudent: 'هل أنت متأكد من أنك تريد حذف التلميذ(ة) {{name}}؟',
+      teacherDashboardTitle: 'لوحة تحكم الأستاذ',
+      teacherSelectLevelAndSubject: 'المرجو اختيار المستوى والمادة للمتابعة',
+      next: 'التالي',
+      level: 'المستوى',
+      class: 'القسم',
+      selectAction: 'اختر الإجراء المطلوب',
+      notesAndAbsences: 'الملاحظات والغياب',
+      aiNotes: 'ملاحظات بالذكاء الاصطناعي',
+      lessonPlanner: 'مخطط الدروس',
+      selectStudent: 'اختر تلميذا',
+      selectStudentForExercises: 'اختر تلميذا لإنشاء تمارين مخصصة',
     }
   },
   fr: {
     translation: {
       back: 'Retour',
       logout: 'Déconnexion',
+      teacherDashboardTitle: "Tableau de bord de l'enseignant",
+      teacherSelectLevelAndSubject: 'Veuillez sélectionner le niveau et la matière pour continuer',
+      next: 'Suivant',
       // ... more keys
     }
   },
