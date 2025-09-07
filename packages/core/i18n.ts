@@ -268,6 +268,16 @@ const resources = {
       markAsCompleted: "تحديد كمكتملة",
       noInterviewRequests: "لا توجد طلبات مقابلة حاليا.",
       noPhotosToReview: "لا توجد صور في انتظار المراجعة.",
+      importFromExcel: "استيراد من ملف إكسل",
+      importExcelInstructions: "يجب أن يحتوي الملف على أعمدة بالأسماء التالية: 'name' (أو 'الاسم') و 'guardian_code' (أو 'رمز ولي الأمر').",
+      importExcelNote: "ملاحظة: سيتم إضافة جميع التلاميذ المستوردين إلى المستوى والقسم المحددين حالياً: {{level}} - {{class}}.",
+      selectExcelFile: "اختر ملف إكسل",
+      importing: "جاري الاستيراد...",
+      importProcessing: "جاري معالجة الملف...",
+      importError: "حدث خطأ أثناء معالجة الملف. الرجاء التأكد من أن التنسيق صحيح.",
+      importReport: "اكتمل الاستيراد.\nالناجحة: {{successCount}} / {{total}}\nالفاشلة: {{errorCount}} / {{total}}\n\nالتفاصيل:\n{{errors}}",
+      importMissingData: "بيانات ناقصة في الصف",
+      guardianCodeInUseError: "رمز ولي الأمر '{{code}}' مستخدم بالفعل.",
 
        // Super Admin
       superAdminDashboardTitle: "لوحة تحكم المدير الخارق",

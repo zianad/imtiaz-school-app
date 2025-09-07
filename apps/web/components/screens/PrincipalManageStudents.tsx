@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { School, Student, EducationalStage } from '../../../../packages/core/types';
 import { STAGE_DETAILS, CLASSES } from '../../../../packages/core/constants';
 import { useTranslation } from '../../../../packages/core/i18n';
 import { supabase } from '../../../../packages/core/supabaseClient';
-import { camelToSnakeCase, snakeToCamelCase } from '../../../../packages/core/utils';
+import { snakeToCamelCase } from '../../../../packages/core/utils';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import * as XLSX from 'xlsx';
 
 interface PrincipalManageStudentsProps {
     school: School;
@@ -36,6 +37,12 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const [filterLevel, setFilterLevel] = useState<string>(stageLevels[0]);
     const [filterClass, setFilterClass] = useState<string>(CLASSES[0]);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Excel Import State
+    const [isImporting, setIsImporting] = useState(false);
+    const [importStatus, setImportStatus] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
 
     const fetchStudents = useCallback(async () => {
         setIsLoading(true);
@@ -60,44 +67,148 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
     const resetForm = () => {
         setName('');
         setGuardianCode('');
-        setLevel(stageLevels[0]);
-        setStudentClass(CLASSES[0]);
     };
+
+    const addStudentAndCreateGuardian = async (studentData: Omit<Student, 'id' | 'grades'>): Promise<{success: boolean, error?: string}> => {
+        // 1. Check if guardian code already exists for this school
+        const { data: existingStudent, error: checkError } = await supabase
+            .from('students')
+            .select('id')
+            .eq('school_id', school.id)
+            .eq('guardian_code', studentData.guardianCode)
+            .single();
+
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116: no rows found
+             console.error('Error checking guardian code:', checkError);
+             return { success: false, error: checkError.message };
+        }
+        if (existingStudent) {
+            return { success: false, error: t('guardianCodeInUseError', { code: studentData.guardianCode }) };
+        }
+
+        // 2. Create the student record
+        const { error: insertError } = await supabase.from('students').insert([
+            {
+                name: studentData.name,
+                guardian_code: studentData.guardianCode,
+                stage: studentData.stage,
+                level: studentData.level,
+                class: studentData.class,
+                school_id: school.id,
+                grades: {} // Initialize with empty grades
+            }
+        ]);
+        
+        if (insertError) {
+             console.error('Error saving student:', insertError);
+             return { success: false, error: insertError.message };
+        }
+        
+        // 3. Create the guardian auth user
+        const email = `${studentData.guardianCode}@${school.id}.com`;
+        const password = `ImtiazApp_${studentData.guardianCode}_S3cure!`;
+        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+
+        if (signUpError) {
+            console.error('Error creating guardian auth user:', signUpError);
+            // Optional: Implement rollback logic to delete the student record if auth creation fails
+            return { success: false, error: `Student created, but guardian login failed: ${signUpError.message}` };
+        }
+
+        return { success: true };
+    };
+
 
     const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (name.trim() && guardianCode.trim() && level && studentClass) {
-            const studentData = {
+            const result = await addStudentAndCreateGuardian({
                 name,
-                guardian_code: guardianCode,
+                guardianCode,
                 stage,
                 level,
-                class: studentClass,
-                school_id: school.id,
-            };
-            
-            const { error } = await supabase.from('students').insert([studentData]);
-            
-            if (error) {
-                alert('Error saving student: ' + error.message);
-            } else {
+                class: studentClass
+            });
+
+            if (result.success) {
                 resetForm();
-                fetchStudents();
+                await fetchStudents(); // Refresh the list
+            } else {
+                alert(result.error || 'An unknown error occurred.');
             }
         } else {
-            alert(t('fillAllFields' as any));
+            alert(t('fillAllFields'));
         }
     };
-
-    const handleDeleteStudent = async (studentId: string) => {
-        if (window.confirm(t('confirmDeleteStudent' as any, { name: students.find(s => s.id === studentId)?.name }))) {
-            const { error } = await supabase.from('students').delete().match({ id: studentId });
+    
+    const handleDeleteStudent = async (student: Student) => {
+        if (window.confirm(t('confirmDeleteStudent', { name: student.name }))) {
+             // We might need to delete the auth user as well. This can be complex.
+             // For now, just delete the student record. The auth user remains but can't log in.
+             // A better solution would be a database function.
+            const { error } = await supabase.from('students').delete().match({ id: student.id });
             if (error) {
                 alert('Error deleting student: ' + error.message);
             } else {
-                fetchStudents();
+                await fetchStudents();
             }
         }
+    };
+    
+    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            setIsImporting(true);
+            setImportStatus(t('importProcessing'));
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+                
+                let successCount = 0;
+                let errorCount = 0;
+                const errors: string[] = [];
+
+                for (const row of json) {
+                    const studentName = row['name'] || row['الاسم'];
+                    const code = row['guardian_code'] || row['رمز ولي الأمر'];
+
+                    if (studentName && code) {
+                        const result = await addStudentAndCreateGuardian({
+                            name: String(studentName),
+                            guardianCode: String(code),
+                            stage: stage,
+                            level: filterLevel, // Use the selected filter level/class
+                            class: filterClass
+                        });
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                            errors.push(`${studentName} (${code}): ${result.error}`);
+                        }
+                    } else {
+                        errorCount++;
+                        errors.push(`${t('importMissingData')}: ${JSON.stringify(row)}`);
+                    }
+                }
+                setImportStatus(t('importReport', { successCount, errorCount, total: json.length, errors: errors.join('\n') }));
+                await fetchStudents();
+            } catch (error) {
+                console.error(error);
+                setImportStatus(t('importError'));
+            } finally {
+                setIsImporting(false);
+                // Reset file input
+                if(fileInputRef.current) fileInputRef.current.value = "";
+            }
+        };
+        reader.readAsArrayBuffer(file);
     };
 
     const filteredStudents = students
@@ -119,22 +230,39 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Form Section */}
-                <form onSubmit={handleAddStudent} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4">
-                     <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
-                    <input type="text" placeholder={t('studentName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
-                    <input type="text" placeholder={t('guardianCode')} value={guardianCode} onChange={e => setGuardianCode(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
-                    
-                    <div className="flex gap-2">
-                        <select value={level} onChange={e => setLevel(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
-                            {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
-                        </select>
-                         <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
-                            {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                <div className="space-y-4">
+                    <form onSubmit={handleAddStudent} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-4">
+                        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('addStudent')}</h2>
+                        <input type="text" placeholder={t('studentName')} value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                        <input type="text" placeholder={t('guardianCode')} value={guardianCode} onChange={e => setGuardianCode(e.target.value)} required className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"/>
+                        
+                        <div className="flex gap-2">
+                            <select value={level} onChange={e => setLevel(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                                {stageLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                            <select value={studentClass} onChange={e => setStudentClass(e.target.value)} className="w-1/2 p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
+                                {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        
+                        <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">{t('addStudent')}</button>
+                    </form>
+                     {/* Excel Import Section */}
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-inner space-y-3">
+                        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200 text-center">{t('importFromExcel')}</h2>
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400">{t('importExcelInstructions')}</p>
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400"><strong>{t('importExcelNote', { level: filterLevel, class: filterClass })}</strong></p>
+                        <input type="file" ref={fileInputRef} onChange={handleFileImport} accept=".xlsx, .xls" className="hidden" />
+                        <button onClick={() => fileInputRef.current?.click()} disabled={isImporting} className="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400">
+                            {isImporting ? t('importing') : t('selectExcelFile')}
+                        </button>
+                        {importStatus && (
+                            <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 text-xs rounded whitespace-pre-wrap">
+                                {importStatus}
+                            </div>
+                        )}
                     </div>
-                    
-                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">{t('addStudent')}</button>
-                </form>
+                </div>
 
                 {/* List Section */}
                  <div className="space-y-3 p-2">
@@ -147,7 +275,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                             {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                      </div>
-                     <input type="text" placeholder={t('searchByName' as any)} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" />
+                     <input type="text" placeholder={t('searchByName')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200" />
                      
                     <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
                         {isLoading ? <p className="text-center dark:text-gray-300">{t('loading')}...</p> : filteredStudents.map(student => (
@@ -156,10 +284,10 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                                     <p className="font-bold text-gray-800 dark:text-gray-100">{student.name}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">Code: {student.guardianCode}</p>
                                 </div>
-                                <button onClick={() => handleDeleteStudent(student.id)} className="text-sm font-semibold text-red-600 hover:underline">{t('delete')}</button>
+                                <button onClick={() => handleDeleteStudent(student)} className="text-sm font-semibold text-red-600 hover:underline">{t('delete')}</button>
                             </div>
                         ))}
-                         {!isLoading && filteredStudents.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('noStudentsInClass' as any)}</p>}
+                         {!isLoading && filteredStudents.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 py-4">{t('noStudentsInClass')}</p>}
                     </div>
                 </div>
             </div>
