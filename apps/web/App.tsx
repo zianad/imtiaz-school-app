@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent, Absence, Grade } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
 import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
-import { useTranslation } from '../../packages/core/i18n';
+import { useTranslation, useDocumentDirection } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -79,6 +79,7 @@ import TeacherViewAnnouncements from './components/screens/TeacherViewAnnounceme
 
 const App: React.FC = () => {
     const { t } = useTranslation();
+    useDocumentDirection(); // Hook to manage document lang and dir attributes.
     const [page, setPage] = useState<Page>(Page.UnifiedLogin);
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [currentUser, setCurrentUser] = useState<Student | Teacher | Principal | null>(null);

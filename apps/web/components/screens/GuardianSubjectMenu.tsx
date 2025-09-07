@@ -18,8 +18,9 @@ interface GuardianSubjectMenuProps {
 }
 
 const GuardianSubjectMenu: React.FC<GuardianSubjectMenuProps> = ({ subject, school, onSelectAction, onBack, onLogout, studentLevel, toggleDarkMode, isDarkMode }) => {
-    const { t, language } = useTranslation();
-    const isFrenchUI = language === 'fr';
+    // FIX: Destructure i18n from useTranslation to correctly access the language property.
+    const { t, i18n } = useTranslation();
+    const isFrenchUI = i18n.language === 'fr';
 
     const getActions = (): { label: string, page: Page, icon: string, level?: string, feature: SchoolFeature }[] => [
         { label: t('summaries'), page: Page.GuardianViewSummaries, icon: '📝', feature: 'guardianViewSummaries' },

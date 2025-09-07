@@ -34,7 +34,8 @@ const fileToGenerativePart = (file: File): Promise<{mimeType:string, data:string
 };
 
 const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode, isDarkMode, quizzes, onSave, onDelete, onBack, onLogout }) => {
-    const { t, language } = useTranslation();
+    // FIX: Destructure i18n from useTranslation to correctly access the language property.
+    const { t, i18n } = useTranslation();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [generatedQuiz, setGeneratedQuiz] = useState<Omit<Quiz, 'id'|'level'|'class'|'subject'|'date'|'stage'> | null>(null);
@@ -92,7 +93,7 @@ const TeacherAddQuiz: React.FC<TeacherAddQuizProps> = ({ school, toggleDarkMode,
                 required: ['title', 'questions']
             };
 
-            const prompt = `Based on the content of this image, generate a multiple-choice quiz. The language of the quiz must be ${language}.`;
+            const prompt = `Based on the content of this image, generate a multiple-choice quiz. The language of the quiz must be ${i18n.language}.`;
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',

@@ -17,14 +17,15 @@ interface GuardianViewTalkingCardsProps {
 }
 
 const GuardianViewTalkingCards: React.FC<GuardianViewTalkingCardsProps> = ({ school, cards, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
-    const { t, language } = useTranslation();
+    // FIX: Destructure i18n from useTranslation to correctly access the language property.
+    const { t, i18n } = useTranslation();
     const [selectedCard, setSelectedCard] = useState<TalkingCard | null>(null);
 
     const sortedCards = [...cards].sort((a, b) => b.date.getTime() - a.date.getTime());
 
     const handleHotspotClick = (text: string) => {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = language === 'fr' ? 'fr-FR' : 'ar-SA';
+        utterance.lang = i18n.language === 'fr' ? 'fr-FR' : 'ar-SA';
         speechSynthesis.speak(utterance);
     };
 

@@ -1,9 +1,10 @@
-
 import i18n from 'i18next';
 import { initReactI18next, useTranslation as useOriginalTranslation } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import { Language } from './types';
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { useEffect } from 'react';
+
+// Re-export the hook for convenience, so other components don't need to change their imports.
+export { useTranslation } from 'react-i18next';
 
 // Minimal translations gathered from component usage
 const resources = {
@@ -127,51 +128,26 @@ i18n
     },
   });
 
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string, options?: any) => string;
-}
+/**
+ * A hook to manage document direction based on the current language.
+ * This should be called once in the root App component.
+ */
+export const useDocumentDirection = () => {
+    const { i18n: i18nInstance } = useOriginalTranslation();
+    useEffect(() => {
+        const handleLanguageChanged = (lng: string) => {
+            const lang = lng.split('-')[0];
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        };
+        i18nInstance.on('languageChanged', handleLanguageChanged);
+        handleLanguageChanged(i18nInstance.language); // Initial setup
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { t, i18n: i18nInstance } = useOriginalTranslation();
-  const [language, setLanguageState] = useState<Language>(() => (i18nInstance.language as Language) || 'ar');
-
-  useEffect(() => {
-    const handleLanguageChanged = (lng: string) => {
-        const lang = lng.split('-')[0] as Language;
-        setLanguageState(lang);
-        document.documentElement.lang = lang;
-        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    };
-    i18nInstance.on('languageChanged', handleLanguageChanged);
-    // Initial setup
-    handleLanguageChanged(i18nInstance.language);
-
-    return () => {
-        i18nInstance.off('languageChanged', handleLanguageChanged);
-    };
-  }, [i18nInstance]);
-
-  const setLanguage = (lang: Language) => {
-    i18nInstance.changeLanguage(lang);
-  };
-
-  return React.createElement(
-    LanguageContext.Provider,
-    { value: { language, setLanguage, t } },
-    children
-  );
+        return () => {
+            i18nInstance.off('languageChanged', handleLanguageChanged);
+        };
+    }, [i18nInstance]);
 };
 
-export const useTranslation = (): LanguageContextType => {
-  const context = useContext(LanguageContext);
-  if (context === undefined) {
-    throw new Error('useTranslation must be used within a LanguageProvider');
-  }
-  return context;
-};
 
 export default i18n;

@@ -4,7 +4,8 @@ import { useTranslation } from '../../../../packages/core/i18n';
 import { Language } from '../../../../packages/core/types';
 
 const LanguageSwitcher: React.FC = () => {
-    const { language, setLanguage } = useTranslation();
+    // FIX: Destructure i18n object from useTranslation to access language and changeLanguage.
+    const { i18n } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -14,7 +15,7 @@ const LanguageSwitcher: React.FC = () => {
         { code: 'en', symbol: 'en', color: 'bg-red-500 hover:bg-red-600' },
     ];
 
-    const currentLang = languages.find(l => l.code === language) || languages[0];
+    const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -50,7 +51,7 @@ const LanguageSwitcher: React.FC = () => {
                             key={lang.code}
                             role="menuitem"
                             onClick={() => {
-                                setLanguage(lang.code);
+                                i18n.changeLanguage(lang.code);
                                 setIsOpen(false);
                             }}
                             className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md transition-transform transform hover:scale-110 ${lang.color}`}

@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './apps/web/App';
-import { LanguageProvider } from './packages/core/i18n';
+import { I18nextProvider } from 'react-i18next';
+import i18n from './packages/core/i18n';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -12,8 +13,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <LanguageProvider>
+    <I18nextProvider i18n={i18n}>
       <App />
-    </LanguageProvider>
+    </I18nextProvider>
   </React.StrictMode>
 );

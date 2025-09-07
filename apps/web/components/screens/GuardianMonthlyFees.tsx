@@ -24,7 +24,8 @@ type AcademicMonth = {
 };
 
 const GuardianMonthlyFees: React.FC<GuardianMonthlyFeesProps> = ({ student, school, payments, onPay, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
-    const { t, language } = useTranslation();
+    // FIX: Destructure i18n from useTranslation to correctly access the language property.
+    const { t, i18n } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<AcademicMonth | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -49,13 +50,13 @@ const GuardianMonthlyFees: React.FC<GuardianMonthlyFeesProps> = ({ student, scho
             const year = startYear + (monthIndex < 8 ? 1 : 0);
             const date = new Date(year, monthIndex, 1);
             months.push({ 
-                name: date.toLocaleString(language === 'fr' ? 'fr-FR' : 'ar-MA', { month: 'long' }), 
+                name: date.toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'ar-MA', { month: 'long' }), 
                 month: monthIndex + 1, // 1-12
                 year: year 
             });
         }
         return months;
-    }, [language]);
+    }, [i18n.language]);
 
     const handlePayClick = (month: AcademicMonth) => {
         setSelectedMonth(month);

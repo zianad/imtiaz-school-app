@@ -15,7 +15,8 @@ interface MobileGuardianViewMemorizationProps {
 }
 
 const MobileGuardianViewMemorization: React.FC<MobileGuardianViewMemorizationProps> = ({ items, onBack, onLogout }) => {
-    const { t, language } = useTranslation();
+    // FIX: Destructure i18n from useTranslation to correctly access the language property.
+    const { t, i18n } = useTranslation();
     const [selectedItem, setSelectedItem] = useState<MemorizationItem | null>(null);
     const [repeatCount, setRepeatCount] = useState<number>(1);
     const [currentPlayCount, setCurrentPlayCount] = useState(0);
@@ -50,7 +51,7 @@ const MobileGuardianViewMemorization: React.FC<MobileGuardianViewMemorizationPro
             audioRef.current.play();
         } else if (selectedItem.contentText) {
             const utterance = new SpeechSynthesisUtterance(selectedItem.contentText);
-            utterance.lang = language === 'fr' ? 'fr-FR' : 'ar-SA';
+            utterance.lang = i18n.language === 'fr' ? 'fr-FR' : 'ar-SA';
             utterance.onend = handlePlaybackEnd;
             utteranceRef.current = utterance;
             speechSynthesis.speak(utterance);
