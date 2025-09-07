@@ -94,8 +94,7 @@ const PrincipalManageStudents: React.FC<PrincipalManageStudentsProps> = ({ schoo
                 stage: studentData.stage,
                 level: studentData.level,
                 class: studentData.class,
-                school_id: school.id,
-                grades: {} // Initialize with empty grades
+                school_id: school.id
             }
         ]);
         
