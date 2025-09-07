@@ -1,100 +1,122 @@
-import React, { useState, useMemo } from 'react';
-import { Quiz, Subject, School } from '../../../../packages/core/types';
+
+import React, { useState, useEffect } from 'react';
+import { Quiz, Question, Student, Subject, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
+import { snakeToCamelCase } from '../../../../packages/core/utils';
 
 interface GuardianViewQuizzesProps {
+    student: Student;
+    subject: Subject | null;
     school: School;
-    quizzes: Quiz[];
     onBack: () => void;
     onLogout: () => void;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
 }
 
-const GuardianViewQuizzes: React.FC<GuardianViewQuizzesProps> = ({ school, quizzes, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
+const GuardianViewQuizzes: React.FC<GuardianViewQuizzesProps> = ({ student, subject, school, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
-    
-    const sortedQuizzes = [...quizzes].sort((a,b) => b.date.getTime() - a.date.getTime());
+    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
+    const [answers, setAnswers] = useState<number[]>([]);
+    const [showResults, setShowResults] = useState(false);
 
-    const isArabicContent = quizzes.length > 0 && quizzes[0]?.subject === Subject.Arabic;
+    useEffect(() => {
+        const fetchQuizzes = async () => {
+            if (!subject) return;
+            setIsLoading(true);
+            const { data, error } = await supabase
+                .from('quizzes')
+                .select('*')
+                .eq('school_id', school.id)
+                .eq('subject', subject)
+                .eq('level', student.level)
+                .order('date', { ascending: false });
 
-    const quizzesByDomain = useMemo(() => {
-        if (!isArabicContent) return null;
-        const groups: Record<string, typeof quizzes> = {};
-        for (const item of sortedQuizzes) {
-            const domainKey = item.domain || t('miscellaneous');
-            if (!groups[domainKey]) {
-                groups[domainKey] = [];
+            if (error) {
+                console.error("Error fetching quizzes:", error);
+            } else {
+                setQuizzes(snakeToCamelCase(data));
             }
-            groups[domainKey].push(item);
-        }
-        return groups;
-    }, [sortedQuizzes, t, isArabicContent]);
+            setIsLoading(false);
+        };
+        fetchQuizzes();
+    }, [school.id, student.level, subject]);
 
-    const renderQuizButton = (quiz: Quiz) => (
-         <button 
-            key={quiz.id} 
-            onClick={() => setSelectedQuiz(quiz)}
-            className="w-full text-right bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow border-r-4 border-blue-500"
-        >
-            <div className="flex justify-between items-center">
-                <p className="font-semibold text-lg text-blue-700">{quiz.title}</p>
-                {quiz.domain && (
-                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">{quiz.domain}</span>
-                )}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">{new Date(quiz.date).toLocaleDateString()}</p>
-        </button>
-    );
+    const startQuiz = (quiz: Quiz) => {
+        setActiveQuiz(quiz);
+        setAnswers(new Array(quiz.questions.length).fill(-1));
+        setShowResults(false);
+    };
 
-    if (selectedQuiz) {
+    const handleAnswer = (qIndex: number, aIndex: number) => {
+        if (showResults) return;
+        const newAnswers = [...answers];
+        newAnswers[qIndex] = aIndex;
+        setAnswers(newAnswers);
+    };
+
+    const handleSubmit = () => {
+        setShowResults(true);
+    };
+
+    const score = activeQuiz ? answers.reduce((correct, ans, i) => {
+        return ans === activeQuiz.questions[i].correctAnswerIndex ? correct + 1 : correct;
+    }, 0) : 0;
+
+    if (activeQuiz) {
         return (
-            <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 w-full relative">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
-                        {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <LanguageSwitcher />
-                        <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-                    </div>
-                </div>
-                <div className="flex justify-center items-center mb-4">
-                    <h1 className="text-2xl font-bold text-gray-800 text-center">{selectedQuiz.title}</h1>
-                    {selectedQuiz.domain && (
-                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold ms-3 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">{selectedQuiz.domain}</span>
-                    )}
-                </div>
-                <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2 bg-gray-50 rounded-lg">
-                    {selectedQuiz.questions.map((q, qIndex) => (
-                        <div key={qIndex} className="bg-white p-4 rounded-lg shadow-sm">
-                            <p className="font-semibold text-gray-800">{qIndex + 1}. {q.question}</p>
-                            <ul className="mt-2 space-y-2">
-                                {q.options.map((option, oIndex) => (
-                                    <li key={oIndex} className="p-2 bg-gray-100 rounded">
-                                        {option}
-                                    </li>
-                                ))}
-                            </ul>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 text-center">{activeQuiz.title}</h1>
+                <div className="max-h-[60vh] overflow-y-auto space-y-6 p-2">
+                    {activeQuiz.questions.map((q, qIndex) => (
+                        <div key={qIndex} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                            <p className="font-semibold text-gray-800 dark:text-gray-200 mb-3">{qIndex + 1}. {q.question}</p>
+                            <div className="space-y-2">
+                                {q.options.map((opt, oIndex) => {
+                                    const isSelected = answers[qIndex] === oIndex;
+                                    const isCorrect = q.correctAnswerIndex === oIndex;
+                                    let btnClass = 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700';
+                                    if (showResults) {
+                                        if (isCorrect) btnClass = 'bg-green-200 dark:bg-green-800';
+                                        else if (isSelected) btnClass = 'bg-red-200 dark:bg-red-800';
+                                    } else if (isSelected) {
+                                        btnClass = 'bg-blue-200 dark:bg-blue-800 ring-2 ring-blue-500';
+                                    }
+                                    return (
+                                        <button key={oIndex} onClick={() => handleAnswer(qIndex, oIndex)} className={`w-full text-right p-3 rounded-lg transition-all ${btnClass}`}>
+                                            {opt}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ))}
                 </div>
-                <div className="mt-8">
-                    <button onClick={() => setSelectedQuiz(null)} className="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300 transition">
-                        {t('back')}
+                {showResults ? (
+                    <div className="text-center mt-6">
+                        <p className="text-xl font-bold text-gray-800 dark:text-gray-100">النتيجة: {score} / {activeQuiz.questions.length}</p>
+                        <button onClick={() => setActiveQuiz(null)} className="w-full mt-4 bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-lg hover:bg-gray-300">
+                            {t('back')}
+                        </button>
+                    </div>
+                ) : (
+                    <button onClick={handleSubmit} className="w-full mt-6 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
+                        {t('submit')}
                     </button>
-                </div>
+                )}
             </div>
-        )
+        );
     }
 
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 w-full relative">
+         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
@@ -104,28 +126,20 @@ const GuardianViewQuizzes: React.FC<GuardianViewQuizzesProps> = ({ school, quizz
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">{t('quizzes')}</h1>
-            
-            <div className="max-h-[70vh] overflow-y-auto space-y-3 p-2 bg-gray-50 rounded-lg">
-                {sortedQuizzes.length > 0 ? (
-                     quizzesByDomain ? (
-                        <div className="space-y-6">
-                            {Object.entries(quizzesByDomain).map(([domain, domainItems]) => (
-                                <div key={domain}>
-                                    <h2 className="text-xl font-bold text-gray-700 mb-3 border-b-2 pb-2">{domain}</h2>
-                                    <div className="space-y-3">
-                                        {domainItems.map(renderQuizButton)}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {sortedQuizzes.map(renderQuizButton)}
-                        </div>
-                    )
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('quizzes')}</h1>
+
+            <div className="w-full min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-gray-700/50 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                {isLoading ? <p>{t('loading')}...</p> : quizzes.length > 0 ? (
+                    <div className="space-y-3">
+                        {quizzes.map(quiz => (
+                            <button key={quiz.id} onClick={() => startQuiz(quiz)} className="w-full text-right bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:bg-blue-50 dark:hover:bg-gray-700 transition">
+                                <p className="font-semibold text-blue-600 dark:text-blue-400">{quiz.title}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{quiz.questions.length} أسئلة</p>
+                            </button>
+                        ))}
+                    </div>
                 ) : (
-                    <p className="text-center text-gray-500 py-10">{t('noQuizzes')}</p>
+                    <p className="text-center text-gray-500 dark:text-gray-400">{t('noQuizzes')}</p>
                 )}
             </div>
 

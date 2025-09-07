@@ -30,7 +30,7 @@ const GuardianViewAnnouncements: React.FC<GuardianViewAnnouncementsProps> = ({ a
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('announcements')}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('viewAnnouncements')}</h1>
             
             <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
                 {announcements.length > 0 ? announcements.sort((a,b) => b.date.getTime() - a.date.getTime()).map(ann => (
