@@ -229,7 +229,7 @@ const SuperAdminSchoolManagement: React.FC<SuperAdminSchoolManagementProps> = ({
                             <h3 className="font-semibold text-lg text-center mb-3 text-blue-600 dark:text-blue-400">{t('principalManagementForStage', { stageName: t(`${stage.toLowerCase()}Stage` as any) })}</h3>
                             
                             <div className="space-y-2 mb-4">
-                                {(school.principals[stage] || []).map(principal => (
+                                {(school.principals || []).filter(p => p.stage === stage).map(principal => (
                                     <div key={principal.id} className="flex justify-between items-center bg-white dark:bg-gray-800 p-2 rounded shadow-sm">
                                         <div>
                                             <p className="font-medium text-gray-800 dark:text-gray-200">{principal.name}</p>

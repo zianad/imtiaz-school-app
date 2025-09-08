@@ -366,7 +366,7 @@ export interface School {
   id: string;
   name: string;
   logoUrl?: string;
-  principals: Partial<Record<EducationalStage, Principal[]>>;
+  principals: Principal[];
   isActive: boolean;
   stages: EducationalStage[]; 
   featureFlags: SchoolFeatureFlags;

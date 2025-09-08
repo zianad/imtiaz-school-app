@@ -149,14 +149,10 @@ export const MOCK_SCHOOLS: School[] = [
     id: 'mock-school-1',
     name: 'مدرسة النجاح النموذجية (تجريبي)',
     logoUrl: 'https://i.imgur.com/3gXIM3w.png',
-    principals: {
-        [EducationalStage.PRIMARY]: [
-            { id: 'principal-1', name: 'مدير الابتدائي', loginCode: 'p1', stage: EducationalStage.PRIMARY }
-        ],
-        [EducationalStage.MIDDLE]: [
-            { id: 'principal-2', name: 'مدير الإعدادي', loginCode: 'p2', stage: EducationalStage.MIDDLE }
-        ]
-    },
+    principals: [
+        { id: 'principal-1', name: 'مدير الابتدائي', loginCode: 'p1', stage: EducationalStage.PRIMARY },
+        { id: 'principal-2', name: 'مدير الإعدادي', loginCode: 'p2', stage: EducationalStage.MIDDLE }
+    ],
     isActive: true,
     stages: [EducationalStage.PRE_SCHOOL, EducationalStage.PRIMARY, EducationalStage.MIDDLE, EducationalStage.HIGH],
     featureFlags: ALL_FEATURES_ENABLED,

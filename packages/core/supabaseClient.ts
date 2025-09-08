@@ -58,10 +58,9 @@ const findUser = (code: string) => {
         const teacher = (school.teachers || []).find(t => t.loginCode === code);
         if (teacher) return { role: UserRole.Teacher, school, user: teacher };
 
-        for (const stage in school.principals) {
-            const principal = school.principals[stage as keyof typeof school.principals]?.find(p => p.loginCode === code);
-            if (principal) return { role: UserRole.Principal, school, user: principal };
-        }
+        // FIX: The principals property is an array of Principal objects. This corrects the logic to search the array directly instead of incorrectly iterating over it as an object.
+        const principal = (school.principals || []).find(p => p.loginCode === code);
+        if (principal) return { role: UserRole.Principal, school, user: principal };
     }
     return null;
 }
@@ -144,10 +143,14 @@ const mockSupabaseClient = {
               const newItem = { ...camelItem, id: Date.now() + Math.random(), date: new Date() };
 
               if (tableName === 'schools') {
-                  mockDataStore.schools.push({ ...newItem, principals: {}, students: [], teachers: [], summaries: [], exercises: [], notes: [], absences: [], examPrograms: [], notifications: [], announcements: [], complaints: [], educationalTips: [], monthlyFeePayments: [], interviewRequests: [], supplementaryLessons: [], timetables: [], quizzes: [], projects: [], libraryItems: [], albumPhotos: [], personalizedExercises: [], unifiedAssessments: [], talkingCards: [], memorizationItems: [], expenses: [], feedback: [] });
+                  // FIX: The principals property must be initialized as an array to align with the School type.
+                  mockDataStore.schools.push({ ...newItem, principals: [], students: [], teachers: [], summaries: [], exercises: [], notes: [], absences: [], examPrograms: [], notifications: [], announcements: [], complaints: [], educationalTips: [], monthlyFeePayments: [], interviewRequests: [], supplementaryLessons: [], timetables: [], quizzes: [], projects: [], libraryItems: [], albumPhotos: [], personalizedExercises: [], unifiedAssessments: [], talkingCards: [], memorizationItems: [], expenses: [], feedback: [] });
               } else if (tableName === 'principals') {
-                  if (!school!.principals[newItem.stage]) school!.principals[newItem.stage] = [];
-                  school!.principals[newItem.stage]?.push(newItem);
+                  // FIX: This ensures that principals are correctly added to the principals array, matching the data structure defined in the School type.
+                  if (!school!.principals) {
+                      school!.principals = [];
+                  }
+                  school!.principals.push(newItem);
               } else {
                   const tableKey = tableName.replace(/_(\w)/g, (match, p1) => p1.toUpperCase()) as keyof School;
                   if (!(school as any)[tableKey]) {

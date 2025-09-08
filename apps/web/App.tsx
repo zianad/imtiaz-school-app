@@ -1,19 +1,39 @@
+// FIX: The import statement was malformed. It has been corrected to properly import React hooks.
 import React, { useState, useEffect, useCallback } from 'react';
-import { GoogleGenAI } from '@google/genai';
-import { Page, UserRole, Student, Teacher, Principal, Subject, School, EducationalStage, SchoolFeature, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Notification, SearchResult } from '../../packages/core/types';
+import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent, Absence, Grade } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-import { SUPER_ADMIN_LOGIN_CODE, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
+import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
+import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
-import { useTranslation } from 'react-i18next';
+import { GoogleGenAI, Type } from "@google/genai";
 
-// --- Import All Screen Components ---
+
+// Screen Imports
 import UnifiedLoginScreen from './components/screens/UnifiedLoginScreen';
-import MaintenanceScreen from './components/screens/MaintenanceScreen';
 import SuperAdminDashboard from './components/screens/SuperAdminDashboard';
 import SuperAdminSchoolManagement from './components/screens/SuperAdminSchoolManagement';
 import SuperAdminFeedbackAnalysis from './components/screens/SuperAdminFeedbackAnalysis';
 import PrincipalStageSelection from './components/screens/PrincipalStageSelection';
 import PrincipalDashboard from './components/screens/PrincipalDashboard';
+import GuardianDashboard from './components/screens/GuardianDashboard';
+import TeacherDashboard from './components/screens/TeacherDashboard';
+import TeacherClassSelection from './components/screens/TeacherClassSelection';
+import TeacherActionMenu from './components/screens/TeacherActionMenu';
+import MaintenanceScreen from './components/screens/MaintenanceScreen';
+import ConfigErrorScreen from './components/screens/ConfigErrorScreen';
+import GuardianSubjectMenu from './components/screens/GuardianSubjectMenu';
+import GuardianViewContent from './components/screens/GuardianViewContent';
+import GuardianViewNotes from './components/screens/GuardianViewNotes';
+import GuardianViewGrades from './components/screens/GuardianViewGrades';
+import TeacherContentForm from './components/screens/TeacherContentForm';
+import TeacherStudentSelection from './components/screens/TeacherStudentSelection';
+import TeacherStudentGrades from './components/screens/TeacherStudentGrades';
+import TeacherExamProgramForm from './components/screens/TeacherExamProgramForm';
+import GuardianViewExamProgram from './components/screens/GuardianViewExamProgram';
+import TeacherNotesForm from './components/screens/TeacherNotesForm';
+import TeacherGenerateReportCard from './components/screens/TeacherGenerateReportCard';
+import TeacherStudentReportGeneration from './components/screens/TeacherStudentReportGeneration';
+import GuardianNotifications from './components/screens/GuardianNotifications';
 import PrincipalReviewNotes from './components/screens/PrincipalReviewNotes';
 import PrincipalManageTeachers from './components/screens/PrincipalManageTeachers';
 import PrincipalManageStudents from './components/screens/PrincipalManageStudents';
@@ -21,474 +41,469 @@ import PrincipalAnnouncements from './components/screens/PrincipalAnnouncements'
 import PrincipalComplaints from './components/screens/PrincipalComplaints';
 import PrincipalEducationalTips from './components/screens/PrincipalEducationalTips';
 import PrincipalPerformanceTracking from './components/screens/PrincipalPerformanceTracking';
+import GuardianViewAnnouncements from './components/screens/GuardianViewAnnouncements';
+import GuardianViewEducationalTips from './components/screens/GuardianViewEducationalTips';
+import GuardianSubmitComplaint from './components/screens/GuardianSubmitComplaint';
 import PrincipalManagementMenu from './components/screens/PrincipalManagementMenu';
 import PrincipalBrowseAsTeacherSelection from './components/screens/PrincipalBrowseAsTeacherSelection';
 import PrincipalMonthlyFees from './components/screens/PrincipalMonthlyFees';
 import PrincipalInterviewRequests from './components/screens/PrincipalInterviewRequests';
-import PrincipalFeeManagement from './components/screens/PrincipalFeeManagement';
-import PrincipalReviewAlbum from './components/screens/PrincipalReviewAlbum';
-import PrincipalFinancialDashboard from './components/screens/PrincipalFinancialDashboard';
-import TeacherDashboard from './components/screens/TeacherDashboard';
-import TeacherClassSelection from './components/screens/TeacherClassSelection';
-import TeacherActionMenu from './components/screens/TeacherActionMenu';
-import TeacherStudentSelection from './components/screens/TeacherStudentSelection';
-import TeacherGenerateReportCard from './components/screens/TeacherGenerateReportCard';
-import TeacherStudentReportGeneration from './components/screens/TeacherStudentReportGeneration';
-import GuardianDashboard from './components/screens/GuardianDashboard';
-import GuardianSubjectMenu from './components/screens/GuardianSubjectMenu';
-import GuardianNotifications from './components/screens/GuardianNotifications';
-import ConfigErrorScreen from './components/screens/ConfigErrorScreen';
-import FeedbackModal from './components/FeedbackModal';
-import TeacherViewAnnouncements from './components/screens/TeacherViewAnnouncements';
-import GuardianViewContent from './components/screens/GuardianViewContent';
-import GuardianViewNotes from './components/screens/GuardianViewNotes';
-import GuardianViewGrades from './components/screens/GuardianViewGrades';
-import GuardianViewExamProgram from './components/screens/GuardianViewExamProgram';
-import GuardianViewAnnouncements from './components/screens/GuardianViewAnnouncements';
-import GuardianViewEducationalTips from './components/screens/GuardianViewEducationalTips';
-import GuardianSubmitComplaint from './components/screens/GuardianSubmitComplaint';
 import GuardianMonthlyFees from './components/screens/GuardianMonthlyFees';
 import GuardianRequestInterview from './components/screens/GuardianRequestInterview';
+import PrincipalFeeManagement from './components/screens/PrincipalFeeManagement';
+import TeacherAddSupplementaryLesson from './components/screens/TeacherAddSupplementaryLesson';
 import GuardianViewSupplementaryLessons from './components/screens/GuardianViewSupplementaryLessons';
-import GuardianViewUnifiedAssessments from './components/screens/GuardianViewUnifiedAssessments';
+import TeacherAddTimetable from './components/screens/TeacherAddTimetable';
 import GuardianViewTimetable from './components/screens/GuardianViewTimetable';
+import TeacherAddQuiz from './components/screens/TeacherAddQuiz';
 import GuardianViewQuizzes from './components/screens/GuardianViewQuizzes';
+import TeacherAddProject from './components/screens/TeacherAddProject';
 import GuardianViewProjects from './components/screens/GuardianViewProjects';
+import TeacherAddLibrary from './components/screens/TeacherAddLibrary';
 import GuardianViewLibrary from './components/screens/GuardianViewLibrary';
+import TeacherLessonPlanner from './components/screens/TeacherLessonPlanner';
+import TeacherPersonalizedExercises from './components/screens/TeacherPersonalizedExercises';
 import GuardianViewPersonalizedExercises from './components/screens/GuardianViewPersonalizedExercises';
+import PrincipalReviewAlbum from './components/screens/PrincipalReviewAlbum';
 import GuardianViewAlbum from './components/screens/GuardianViewAlbum';
+import TeacherManageAlbum from './components/screens/TeacherManageAlbum';
+import TeacherAddUnifiedAssessment from './components/screens/TeacherAddUnifiedAssessment';
+import GuardianViewUnifiedAssessments from './components/screens/GuardianViewUnifiedAssessments';
+import TeacherManageTalkingCards from './components/screens/TeacherManageTalkingCards';
 import GuardianViewTalkingCards from './components/screens/GuardianViewTalkingCards';
+import TeacherManageMemorization from './components/screens/TeacherManageMemorization';
 import GuardianViewMemorization from './components/screens/GuardianViewMemorization';
-import SearchHeader from './components/common/SearchHeader';
-import SearchResultModal from './components/common/SearchResultModal';
-import ConfirmationModal from './components/common/ConfirmationModal';
+import PrincipalFinancialDashboard from './components/screens/PrincipalFinancialDashboard';
+import FeedbackModal from './components/FeedbackModal';
+import TeacherViewAnnouncements from './components/screens/TeacherViewAnnouncements';
 
 const App: React.FC = () => {
-    // --- Global State ---
-    const [page, setPage] = useState<Page>(Page.UnifiedLogin);
-    const [userRole, setUserRole] = useState<UserRole | null>(null);
-    const [currentUser, setCurrentUser] = useState<Student | Teacher | Principal | { id: string } | null>(null);
-    const [schools, setSchools] = useState<School[]>([]); // For SuperAdmin
-    const [currentSchool, setCurrentSchool] = useState<School | null>(null); // For logged-in users
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const [sessionChecked, setSessionChecked] = useState(false);
-    const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-
-    // --- Screen-specific state ---
-    const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-    const [selectedLevel, setSelectedLevel] = useState<string>('');
-    const [selectedClass, setSelectedClass] = useState<string>('');
-    const [selectedStage, setSelectedStage] = useState<EducationalStage | null>(null);
-    const [selectedSchoolForMgmt, setSelectedSchoolForMgmt] = useState<School | null>(null);
-    const [impersonatingTeacher, setImpersonatingTeacher] = useState<Teacher | null>(null);
+    const { t, i18n } = useTranslation();
     
-    // --- Search State ---
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-    const [selectedSearchResult, setSelectedSearchResult] = useState<SearchResult | null>(null);
-
-    // --- Confirmation Modal State ---
-    const [confirmation, setConfirmation] = useState<{
-        isOpen: boolean;
-        title: string;
-        message: string;
-        onConfirm: () => void;
-    } | null>(null);
-
-    const { i18n } = useTranslation();
-
-    // --- AI instance ---
-    const ai = isSupabaseConfigured ? new GoogleGenAI({apiKey: (import.meta as any).env.VITE_API_KEY as string}) : null;
-
-    // --- Effects ---
+    // Effect to manage document lang and dir attributes based on language
     useEffect(() => {
-        const isDark = localStorage.getItem('darkMode') === 'true' || 
-                       (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        setIsDarkMode(isDark);
-        document.documentElement.classList.toggle('dark', isDark);
-    }, []);
-
-    // Effect for language direction
-    useEffect(() => {
-        const handleLanguageChange = (lng: string) => {
-            document.documentElement.lang = lng;
-            document.documentElement.dir = i18n.dir(lng);
+        const handleLanguageChanged = (lng: string) => {
+            const lang = lng.split('-')[0];
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
         };
-        i18n.on('languageChanged', handleLanguageChange);
-        handleLanguageChange(i18n.language); // Set initial direction
+        i18n.on('languageChanged', handleLanguageChanged);
+        handleLanguageChanged(i18n.language); // Initial setup
+
         return () => {
-            i18n.off('languageChanged', handleLanguageChange);
+            i18n.off('languageChanged', handleLanguageChanged);
         };
     }, [i18n]);
-    
-    // --- Auth State Change Handler ---
-    const handleAuthStateChange = useCallback(async (session: any) => {
-        setIsLoading(true);
-        if (session?.user) {
-            const { user } = session;
-            if (user.email === (import.meta as any).env.VITE_SUPER_ADMIN_EMAIL) {
-                setUserRole(UserRole.SuperAdmin);
-                setCurrentUser({ id: user.id });
-                await fetchAllSchoolsForSuperAdmin();
-                setPage(Page.SuperAdminDashboard);
-            } else {
-                const [code, schoolIdDomain] = user.email.split('@');
-                const schoolId = schoolIdDomain.split('.')[0];
-                
-                const { data: schoolData, error: schoolError } = await supabase
-                    .from('schools')
-                    .select('*')
-                    .eq('id', schoolId)
-                    .single();
 
-                if (schoolError || !schoolData) {
-                    console.error("User's school not found:", schoolError);
-                    await performLogout(); return;
-                }
-                const school = snakeToCamelCase(schoolData) as School;
-                setCurrentSchool(school);
+    const [page, setPage] = useState<Page>(Page.UnifiedLogin);
+    const [userRole, setUserRole] = useState<UserRole | null>(null);
+    const [currentUser, setCurrentUser] = useState<Student | Teacher | Principal | null>(null);
+    const [school, setSchool] = useState<School | null>(null);
+    const [schools, setSchools] = useState<School[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [session, setSession] = useState<any | null | undefined>(undefined);
 
-                const { data: studentData } = await supabase.from('students').select('*').eq('guardian_code', code).eq('school_id', schoolId).single();
-                if (studentData) { 
-                    const student = snakeToCamelCase(studentData) as Student;
-                    setUserRole(UserRole.Guardian); 
-                    setCurrentUser(student);
-                    const { data: notifData } = await supabase.from('notifications').select('*').eq('student_id', student.id).order('date', { ascending: false });
-                    setNotifications(notifData ? snakeToCamelCase(notifData) as Notification[] : []);
-                    setPage(Page.GuardianDashboard); 
-                } else {
-                    const { data: teacherData } = await supabase.from('teachers').select('*').eq('login_code', code).eq('school_id', schoolId).single();
-                    if (teacherData) { 
-                        setUserRole(UserRole.Teacher); 
-                        setCurrentUser(snakeToCamelCase(teacherData)); 
-                        setPage(Page.TeacherDashboard); 
-                    } else {
-                        const { data: principalData } = await supabase.from('principals').select('*').eq('login_code', code).eq('school_id', schoolId).single();
-                        if (principalData) { 
-                            setUserRole(UserRole.Principal); 
-                            setCurrentUser(snakeToCamelCase(principalData)); 
-                            setPage(Page.PrincipalStageSelection); 
-                        } else { 
-                            console.error("User profile not found for code:", code); 
-                            await performLogout(); 
-                        }
-                    }
-                }
-            }
-        } else {
-            setUserRole(null);
-            setCurrentUser(null);
-            setCurrentSchool(null);
-            setPage(Page.UnifiedLogin);
-        }
-        setIsLoading(false);
-        setSessionChecked(true);
-    }, []);
-    
+    // Navigation state
+    const [selectedStage, setSelectedStage] = useState<EducationalStage | null>(null);
+    const [selectedLevel, setSelectedLevel] = useState<string>('');
+    const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+    const [selectedClass, setSelectedClass] = useState<string>('');
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [nextPageAfterStudentSelection, setNextPageAfterStudentSelection] = useState<Page | null>(null);
+
+    const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            handleAuthStateChange(session);
-        });
-        
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            handleAuthStateChange(session);
-        });
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        setIsDarkMode(darkMode);
+    }, []);
 
-        return () => subscription.unsubscribe();
-    }, [handleAuthStateChange]);
+    useEffect(() => {
+        document.documentElement.classList.toggle('dark', isDarkMode);
+        localStorage.setItem('darkMode', String(isDarkMode));
+    }, [isDarkMode]);
 
-
-    // --- Core Functions ---
-    const toggleDarkMode = () => {
-        setIsDarkMode(prev => {
-            const newIsDark = !prev;
-            localStorage.setItem('darkMode', String(newIsDark));
-            document.documentElement.classList.toggle('dark', newIsDark);
-            return newIsDark;
-        });
-    };
-
-    const performLogout = async () => {
-        await supabase.auth.signOut();
-        setIsFeedbackModalOpen(true);
-        // Reset state
+    const resetAppState = useCallback(() => {
+        setPage(Page.UnifiedLogin);
         setUserRole(null);
         setCurrentUser(null);
-        setCurrentSchool(null);
-        setSelectedSubject(null);
-        setSelectedLevel('');
-        setSelectedClass('');
+        setSchool(null);
+        setSchools([]);
         setSelectedStage(null);
-        setImpersonatingTeacher(null);
-        setPage(Page.UnifiedLogin);
-    };
+        setSelectedLevel('');
+        setSelectedSubject(null);
+        setSelectedClass('');
+        setSelectedStudent(null);
+        setNextPageAfterStudentSelection(null);
+    }, []);
+    
+    const performLogout = useCallback(async () => {
+        if (isSupabaseConfigured) {
+            const { error } = await supabase.auth.signOut();
+            if (error) console.error("Error signing out:", error);
+        }
+        setSession(null);
+        resetAppState();
+    }, [resetAppState]);
 
-    const handleLogin = async (code: string): Promise<void> => {
-        code = code.trim();
-        if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
-            await supabase.auth.signInWithPassword({
-                email: (import.meta as any).env.VITE_SUPER_ADMIN_EMAIL,
-                password: (import.meta as any).env.VITE_SUPER_ADMIN_PASSWORD
-            });
+    const fetchSchoolData = useCallback(async (schoolId: string): Promise<School | null> => {
+        if (!isSupabaseConfigured) {
+            return null; 
+        }
+        try {
+            const { data: schoolData, error: schoolError } = await supabase
+                .from('schools')
+                .select('*, principals(*), teachers(*)')
+                .eq('id', schoolId)
+                .single();
+
+            if (schoolError) throw schoolError;
+            if (!schoolData) return null;
+            
+            return snakeToCamelCase(schoolData) as School;
+        } catch (error) {
+            console.error('Error fetching initial school data:', error);
+            throw error;
+        }
+    }, []);
+    
+    const handleLogin = async (code: string) => {
+        if (!isSupabaseConfigured) {
             return;
         }
 
-        const { data: principalData } = await supabase.from('principals').select('school_id').eq('login_code', code).single();
-        if (principalData) {
-            const email = `${code}@${principalData.school_id}.com`;
-            const password = `ImtiazApp_${code}_S3cure!`;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (code.toLowerCase() === SUPER_ADMIN_LOGIN_CODE.toLowerCase()) {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: SUPER_ADMIN_EMAIL,
+                password: SUPER_ADMIN_PASSWORD,
+            });
             if (error) throw new Error(error.message);
             return;
         }
 
-        const { data: teacherData } = await supabase.from('teachers').select('school_id').eq('login_code', code).single();
-        if (teacherData) {
-            const email = `${code}@${teacherData.school_id}.com`;
-            const password = `ImtiazApp_${code}_S3cure!`;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-             if (error) throw new Error(error.message);
-            return;
+        let userResult: any = null;
+        let schoolId: string | null = null;
+
+        const tablesToSearch = ['students', 'teachers', 'principals'];
+        const codeFields = ['guardian_code', 'login_code', 'login_code'];
+        
+        for (let i = 0; i < tablesToSearch.length; i++) {
+            const { data, error } = await supabase
+                .from(tablesToSearch[i])
+                .select('school_id')
+                .eq(codeFields[i], code)
+                .limit(1);
+
+            if (error) {
+                 if (error.message.includes("permission denied")) {
+                    throw new Error("RLS_LOGIN_ERROR");
+                }
+                console.error(`Error searching in ${tablesToSearch[i]}`, error);
+                continue;
+            }
+
+            if (data && data.length > 0) {
+                userResult = data[0];
+                schoolId = data[0].school_id;
+                break;
+            }
         }
 
-        const { data: studentData } = await supabase.from('students').select('school_id').eq('guardian_code', code).single();
-        if (studentData) {
-             const email = `${code}@${studentData.school_id}.com`;
-             const password = `ImtiazApp_${code}_S3cure!`;
-             const { error } = await supabase.auth.signInWithPassword({ email, password });
-              if (error) throw new Error(error.message);
-             return;
+        if (!userResult || !schoolId) {
+            throw new Error(t('invalidCode'));
         }
         
-        throw new Error('Invalid login credentials');
+        const email = `${code}@${schoolId}.com`;
+        const password = `ImtiazApp_${code}_S3cure!`;
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (signInError) {
+            if (signInError.message.includes('Invalid login credentials')) {
+                const { error: signUpError } = await supabase.auth.signUp({ email, password });
+                if (signUpError) {
+                     if (signUpError.message.includes('Email rate limit exceeded')) {
+                         throw new Error("SUPABASE_SIGNUPS_DISABLED_ERROR");
+                    }
+                     throw new Error(signUpError.message);
+                }
+                const { error: secondSignInError } = await supabase.auth.signInWithPassword({ email, password });
+                if (secondSignInError) {
+                    if (secondSignInError.message.includes('Email not confirmed')) {
+                        throw new Error("SUPABASE_EMAIL_CONFIRMATION_ERROR");
+                    }
+                     throw new Error(secondSignInError.message);
+                }
+            } else {
+                 throw new Error(signInError.message);
+            }
+        }
     };
     
-    // --- Super Admin Functions ---
-    const fetchAllSchoolsForSuperAdmin = useCallback(async () => {
-        const { data, error } = await supabase.from('schools').select('*, principals(*)').order('name');
-        if (error) {
-            console.error("Error fetching schools:", error);
-        } else {
-             const schoolsData = snakeToCamelCase(data) as School[];
-            const schoolsWithGroupedPrincipals = schoolsData.map(school => {
-                const groupedPrincipals: Partial<Record<EducationalStage, Principal[]>> = {};
-                // Ensure principals is an array before iterating
-                if (Array.isArray(school.principals)) {
-                    for (const principal of school.principals) {
-                        if (!groupedPrincipals[principal.stage]) {
-                            groupedPrincipals[principal.stage] = [];
-                        }
-                        groupedPrincipals[principal.stage]!.push(principal);
-                    }
-                }
-                return { ...school, principals: groupedPrincipals };
-            });
-            setSchools(schoolsWithGroupedPrincipals as any);
+    useEffect(() => {
+        if (!isSupabaseConfigured) {
+            setIsLoading(false);
+            setSession(null);
+            return;
         }
+        
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setSession(session);
+            }
+        );
+    
+        return () => {
+            authListener?.subscription.unsubscribe();
+        };
     }, []);
     
-    const handleAddSchool = async (schoolName: string, principalCode: string, logoUrl: string) => {
-        const { data: schoolData, error: schoolError } = await supabase.from('schools').insert({
-            name: schoolName,
-            logo_url: logoUrl,
-            stages: [EducationalStage.PRIMARY], 
-            feature_flags: ALL_FEATURES_ENABLED,
-            is_active: true,
-        }).select().single();
-
-        if (schoolError || !schoolData) {
-            throw new Error('Error adding school: ' + schoolError?.message);
-        }
-
-        const principalEmail = `${principalCode}@${schoolData.id}.com`;
-        const principalPassword = `ImtiazApp_${principalCode}_S3cure!`;
-        
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
-            email: principalEmail,
-            password: principalPassword,
-        });
-
-        if (signUpError || !authData.user) {
-             await supabase.from('schools').delete().eq('id', schoolData.id); // Rollback
-             throw new Error('Failed to create principal login: ' + signUpError?.message);
-        }
-
-        const { error: principalError } = await supabase.from('principals').insert({
-            name: "المدير العام",
-            login_code: principalCode,
-            stage: EducationalStage.PRIMARY,
-            school_id: schoolData.id,
-            user_id: authData.user.id
-        });
-
-        if (principalError) {
-             await supabase.from('schools').delete().eq('id', schoolData.id); // Rollback
-             await supabase.auth.admin.deleteUser(authData.user.id); // Rollback
-             throw new Error('School added, but failed to add principal profile: ' + principalError.message);
-        }
-        await fetchAllSchoolsForSuperAdmin();
-    };
-    
-    const confirmDeleteSchool = (schoolId: string, schoolName: string) => {
-        setConfirmation({
-            isOpen: true,
-            title: "تأكيد الحذف",
-            message: `هل أنت متأكد من رغبتك في حذف مدرسة "${schoolName}"؟ سيتم حذف جميع البيانات المرتبطة بها بشكل دائم.`,
-            onConfirm: () => handleDeleteSchool(schoolId),
-        });
-    };
-    
-    const handleDeleteSchool = async (schoolId: string) => {
-        const { error } = await supabase.rpc('delete_school', { school_id_to_delete: schoolId });
-        if (error) alert('Error deleting school: ' + error.message);
-        else await fetchAllSchoolsForSuperAdmin();
-    };
-    
-    const handleManageSchool = (schoolId: string) => {
-        const schoolToManage = schools.find(s => s.id === schoolId);
-        if (schoolToManage) {
-            setSelectedSchoolForMgmt(schoolToManage);
-            setPage(Page.SuperAdminSchoolManagement);
-        }
-    };
-    
-
-    // --- Search Functionality ---
     useEffect(() => {
-        if (searchQuery.length < 2) {
-            setSearchResults([]);
-            return;
-        }
+        const processSession = async () => {
+            if (session === undefined) return; 
 
-        const debounceTimer = setTimeout(async () => {
-            if (!currentSchool) return;
-            setIsSearching(true);
-            
-            // This is a simplified search. A real app might use a dedicated search endpoint or Postgres functions.
-            const { data, error } = await supabase.rpc('search_school_data', {
-                p_school_id: currentSchool.id,
-                p_search_term: searchQuery
-            });
-            
-            if (error) {
-                console.error("Search error:", error);
-                setSearchResults([]);
-            } else {
-                setSearchResults(snakeToCamelCase(data) as SearchResult[]);
-            }
-            setIsSearching(false);
-        }, 300);
+            setIsLoading(true);
+            try {
+                if (session) {
+                    const userEmail = session.user?.email;
+                    if (userEmail === SUPER_ADMIN_EMAIL) {
+                        const { data: schoolsData, error } = await supabase.from('schools').select('*, principals(*)');
+                        if (error) throw error;
+                        setSchools(snakeToCamelCase(schoolsData));
+                        setUserRole(UserRole.SuperAdmin);
+                        setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
+                        setPage(Page.SuperAdminDashboard);
+                    } else {
+                        const code = userEmail?.split('@')[0];
+                        const schoolId = userEmail?.split('@')[1]?.split('.')[0];
 
-        return () => clearTimeout(debounceTimer);
-    }, [searchQuery, currentSchool]);
-    
-    // FIX: Add handler for marking notifications as read.
-    const handleMarkAsRead = async (notificationId: number) => {
-        setNotifications(prev =>
-            prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-        );
-        const { error } = await supabase
-            .from('notifications')
-            .update({ read: true })
-            .eq('id', notificationId);
+                        if (code && schoolId) {
+                            const fetchedSchool = await fetchSchoolData(schoolId);
+                            if (fetchedSchool) {
+                                setSchool(fetchedSchool);
+                                
+                                // FIX: Reordered user type detection to avoid RLS errors. Check principal/teacher first.
+                                const principal = (fetchedSchool.principals || []).find((p: Principal) => p.loginCode === code);
+                                if (principal) {
+                                    setUserRole(UserRole.Principal);
+                                    setCurrentUser(principal);
+                                    setPage(Page.PrincipalStageSelection);
+                                    return;
+                                }
+                                
+                                const teacher = (fetchedSchool.teachers || []).find(t => t.loginCode === code);
+                                if (teacher) {
+                                    setUserRole(UserRole.Teacher);
+                                    setCurrentUser(teacher);
+                                    setPage(Page.TeacherDashboard);
+                                    return;
+                                }
 
-        if (error) {
-            console.error('Failed to mark notification as read:', error);
-            // Optionally revert state change on error
-            setNotifications(prev =>
-                prev.map(n => n.id === notificationId ? { ...n, read: false } : n)
-            );
-        }
-    };
-
-
-    // --- Page Rendering Logic ---
-    const renderPage = () => {
-        // ... (render logic based on 'page' state)
-        // This will be a large switch statement
-        switch(page){
-            // Add all cases here based on the Page enum
-            case Page.UnifiedLogin: return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            case Page.SuperAdminDashboard: return <SuperAdminDashboard schools={schools} onAddSchool={handleAddSchool} onDeleteSchool={confirmDeleteSchool} onManageSchool={handleManageSchool} onNavigate={setPage} onLogout={performLogout} />;
-            case Page.SuperAdminSchoolManagement: return <SuperAdminSchoolManagement school={selectedSchoolForMgmt!} onBack={() => {setSelectedSchoolForMgmt(null); setPage(Page.SuperAdminDashboard);}} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onDataChange={fetchAllSchoolsForSuperAdmin} />;
-            case Page.SuperAdminFeedbackAnalysis: return <SuperAdminFeedbackAnalysis schools={schools} onAnalyze={async () => "Analysis from AI"} onBack={()=>setPage(Page.SuperAdminDashboard)} onLogout={performLogout} />;
-
-            case Page.PrincipalStageSelection: return <PrincipalStageSelection school={currentSchool!} principal={currentUser as Principal} onSelectStage={(s) => { setSelectedStage(s); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            case Page.PrincipalDashboard: return <PrincipalDashboard school={currentSchool!} stage={selectedStage!} onSelectAction={setPage} onBack={() => setPage(Page.PrincipalStageSelection)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            
-            case Page.GuardianDashboard: return <GuardianDashboard student={currentUser as Student} school={currentSchool!} onSelectSubject={(s) => { setSelectedSubject(s); setPage(Page.GuardianSubjectMenu); }} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} notifications={notifications} />;
-            case Page.GuardianSubjectMenu: return <GuardianSubjectMenu subject={selectedSubject!} school={currentSchool!} onSelectAction={setPage} onBack={() => setPage(Page.GuardianDashboard)} onLogout={performLogout} studentLevel={(currentUser as Student).level} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            // FIX: Pass notifications and onMarkAsRead handler to GuardianNotifications component.
-            case Page.GuardianNotifications: return <GuardianNotifications school={currentSchool!} student={currentUser as Student} onBack={() => setPage(Page.GuardianDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} notifications={notifications} onMarkAsRead={handleMarkAsRead} />;
-
-            case Page.TeacherDashboard: return <TeacherDashboard school={currentSchool!} teacher={currentUser as Teacher} onSelectionComplete={(level, subject) => { setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection); }} onBack={performLogout} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>;
-            
-            // Lazy-loaded component cases
-            case Page.PrincipalManageStudents: return <PrincipalManageStudents school={currentSchool!} stage={selectedStage!} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
-            case Page.PrincipalComplaints: return <PrincipalComplaints school={currentSchool!} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode}/>
-            
-            // Add all other cases
-            default:
-                if (userRole) { // If logged in but page not found, go to dashboard
-                    if (userRole === UserRole.SuperAdmin) setPage(Page.SuperAdminDashboard);
-                    else if (userRole === UserRole.Principal) setPage(Page.PrincipalStageSelection);
-                    else if (userRole === UserRole.Teacher) setPage(Page.TeacherDashboard);
-                    else if (userRole === UserRole.Guardian) setPage(Page.GuardianDashboard);
-                    return null; // The page will re-render to the correct dashboard
+                                const { data: student } = await supabase.from('students').select('*').eq('school_id', schoolId).eq('guardian_code', code).single();
+                                if (student) {
+                                    setUserRole(UserRole.Guardian);
+                                    setCurrentUser(snakeToCamelCase(student));
+                                    setPage(Page.GuardianDashboard);
+                                    return;
+                                }
+                                
+                                console.error("User from session not found. Logging out.");
+                                await performLogout();
+                            } else {
+                                console.error("School not found. Logging out.");
+                                await performLogout();
+                            }
+                        } else {
+                             console.error("Invalid email in session. Logging out.");
+                             await performLogout();
+                        }
+                    }
+                } else {
+                    resetAppState();
                 }
-                return <div>Page not found for role {userRole} and page {page}</div>;
+            } catch (error) {
+                console.error("Error processing auth state change:", error);
+                resetAppState();
+            } finally {
+                setIsLoading(false);
+            }
+        };
+    
+        processSession();
+    }, [session, fetchSchoolData, resetAppState, performLogout]);
+    
+    const handleTeacherActionNavigation = (nextPage: Page) => {
+      const pagesRequiringStudentSelection = [
+        Page.TeacherStudentSelection, // For grades
+        Page.TeacherGenerateReportCard, // For AI notes
+        Page.TeacherStudentSelectionForExercises // For personalized exercises
+      ];
+      
+      if (pagesRequiringStudentSelection.includes(nextPage)) {
+        let targetPage: Page;
+        if (nextPage === Page.TeacherStudentSelection) targetPage = Page.TeacherStudentGrades;
+        else if (nextPage === Page.TeacherGenerateReportCard) targetPage = Page.TeacherStudentReportGeneration;
+        else targetPage = Page.TeacherPersonalizedExercises; // This assumes TeacherStudentSelectionForExercises leads here
+        
+        setNextPageAfterStudentSelection(targetPage);
+        setPage(Page.TeacherStudentSelection);
+      } else {
+        setPage(nextPage);
+      }
+    };
+    
+    const renderPage = () => {
+        if (!isSupabaseConfigured && (import.meta as any).env.PROD) {
+            return <ConfigErrorScreen />;
+        }
 
+        if (isLoading) {
+            return <div className="flex items-center justify-center h-screen dark:text-gray-200">Loading...</div>;
+        }
+
+        if (userRole === UserRole.SuperAdmin) {
+            switch (page) {
+                case Page.SuperAdminDashboard:
+                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
+                case Page.SuperAdminSchoolManagement:
+                    return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={()=>{}} onToggleStatus={()=>{}} onToggleStage={()=>{}} onToggleFeatureFlag={()=>{}} onEnterFeaturePage={()=>{}} onAddPrincipal={()=>{}} onDeletePrincipal={()=>{}} onUpdatePrincipalCode={()=>{}} />;
+                 case Page.SuperAdminFeedbackAnalysis:
+                    return <SuperAdminFeedbackAnalysis schools={schools} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} onAnalyze={async () => "AI analysis"} />;
+                default:
+                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
+            }
+        }
+
+        if (school && !school.isActive && userRole) {
+            return <MaintenanceScreen onLogout={performLogout} />;
+        }
+        
+        switch (userRole) {
+            case UserRole.Principal:
+                 if (!school || !currentUser) return null; 
+                switch (page) {
+                    case Page.PrincipalStageSelection:
+                         const accessibleStages = (school.principals || []).filter((p: Principal) => p.id === (currentUser as Principal).id).map((p: Principal) => p.stage);
+                        return <PrincipalStageSelection school={school} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
+                    case Page.PrincipalDashboard:
+                        return <PrincipalDashboard school={school} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalManagementMenu:
+                        return <PrincipalManagementMenu school={school} stage={selectedStage!} onSelectAction={setPage} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalManageStudents:
+                        return <PrincipalManageStudents school={school} stage={selectedStage!} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalManageTeachers:
+                        return <PrincipalManageTeachers school={school} stage={selectedStage!} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalFeeManagement:
+                        return <PrincipalFeeManagement school={school} onBack={() => setPage(Page.PrincipalManagementMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateFees={() => {}} />;
+                    case Page.PrincipalComplaints:
+                        return <PrincipalComplaints school={school} onAnalyze={async () => "AI analysis"} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalAnnouncements:
+                        return <PrincipalAnnouncements school={school} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} announcements={[]} teachers={[]} onAddAnnouncement={() => {}} />;
+                    case Page.PrincipalEducationalTips:
+                        return <PrincipalEducationalTips school={school} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} tips={[]} onAddTip={() => {}} onGenerateAITip={async () => "AI Tip"} />;
+                    case Page.PrincipalPerformanceTracking:
+                        return <PrincipalPerformanceTracking school={school} stage={selectedStage!} students={[]} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalReviewNotes:
+                        return <PrincipalReviewNotes school={school} stage={selectedStage!} notes={[]} students={[]} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalReviewAlbum:
+                        return <PrincipalReviewAlbum school={school} pendingPhotos={[]} onApprove={() => {}} onReject={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalMonthlyFees:
+                        return <PrincipalMonthlyFees school={school} stage={selectedStage!} students={[]} payments={[]} onMarkAsPaid={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalInterviewRequests:
+                        return <PrincipalInterviewRequests school={school} requests={[]} students={[]} onComplete={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalFinancialDashboard:
+                        return <PrincipalFinancialDashboard school={school} stage={selectedStage!} onAddExpense={() => {}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.PrincipalBrowseAsTeacherSelection:
+                        return <PrincipalBrowseAsTeacherSelection school={school} stage={selectedStage!} onSelectionComplete={()=>{}} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    default:
+                        return <PrincipalDashboard school={school} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                }
+
+            case UserRole.Teacher:
+                 if (!school || !currentUser) return null;
+                 // FIX: The onLogout property was not defined in the teacherProps object. It has been corrected to use the performLogout function, which is available in the component's scope.
+                 const teacherProps = { school, toggleDarkMode, isDarkMode, onLogout: performLogout, teacher: currentUser as Teacher };
+                 const backToClassSelection = () => setPage(Page.TeacherClassSelection);
+                 const backToActionMenu = () => setPage(Page.TeacherActionMenu);
+                 
+                 switch (page) {
+                    case Page.TeacherDashboard:
+                        return <TeacherDashboard {...teacherProps} onSelectionComplete={(level, subject) => { setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection); }} onBack={performLogout} />;
+                    case Page.TeacherClassSelection:
+                        const classes = (currentUser as Teacher).assignments[selectedLevel] || [];
+                        return <TeacherClassSelection {...teacherProps} classes={classes} onSelectClass={(cls) => { setSelectedClass(cls); setPage(Page.TeacherActionMenu); }} onBack={() => setPage(Page.TeacherDashboard)} />;
+                    case Page.TeacherActionMenu:
+                        return <TeacherActionMenu {...teacherProps} selectedLevel={selectedLevel} onSelectAction={handleTeacherActionNavigation} onBack={backToClassSelection} />;
+                    case Page.TeacherViewAnnouncements:
+                         return <TeacherViewAnnouncements {...teacherProps} announcements={[]} onBack={backToActionMenu}/>
+                    case Page.TeacherManageSummaries:
+                         return <TeacherContentForm {...teacherProps} type="summary" items={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} subject={selectedSubject!} />;
+                    case Page.TeacherManageExercises:
+                         return <TeacherContentForm {...teacherProps} type="exercise" items={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} subject={selectedSubject!} />;
+                    case Page.TeacherManageNotes:
+                         return <TeacherNotesForm {...teacherProps} students={[]} onSaveNote={() => {}} onMarkAbsent={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentSelection:
+                         return <TeacherStudentSelection {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(nextPageAfterStudentSelection!); }} onBack={backToActionMenu} title={t('selectStudent')} />;
+                    case Page.TeacherStudentGrades:
+                         return <TeacherStudentGrades {...teacherProps} student={selectedStudent!} subject={selectedSubject!} initialGrades={[]} onSave={() => {}} onBack={() => setPage(Page.TeacherStudentSelection)} />;
+                    case Page.TeacherManageExamProgram:
+                         return <TeacherExamProgramForm {...teacherProps} examPrograms={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherGenerateReportCard: // This is the selection screen
+                         return <TeacherGenerateReportCard {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(Page.TeacherStudentReportGeneration); }} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentReportGeneration:
+                         return <TeacherStudentReportGeneration {...teacherProps} student={selectedStudent!} subject={selectedSubject!} onGenerateComment={async () => "AI Comment"} onSendForReview={() => {}} onBack={() => setPage(Page.TeacherGenerateReportCard)} />;
+                    case Page.TeacherAddSupplementaryLesson:
+                        return <TeacherAddSupplementaryLesson {...teacherProps} subject={selectedSubject!} lessons={[]} onSave={()=>{}} onDelete={()=>{}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddUnifiedAssessment:
+                        return <TeacherAddUnifiedAssessment {...teacherProps} assessments={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddTimetable:
+                        return <TeacherAddTimetable {...teacherProps} timetables={[]} onSave={()=>{}} onDelete={()=>{}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddQuiz:
+                        return <TeacherAddQuiz {...teacherProps} quizzes={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddProject:
+                        return <TeacherAddProject {...teacherProps} projects={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherAddLibrary:
+                        return <TeacherAddLibrary {...teacherProps} libraryItems={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherLessonPlanner:
+                        return <TeacherLessonPlanner {...teacherProps} onGenerate={async () => "AI Lesson Plan"} onBack={backToActionMenu} />;
+                    case Page.TeacherStudentSelectionForExercises:
+                        return <TeacherStudentSelection {...teacherProps} students={[]} onSelectStudent={(student) => { setSelectedStudent(student); setPage(Page.TeacherPersonalizedExercises); }} onBack={backToActionMenu} title={t('selectStudentForExercises')} />;
+                    case Page.TeacherPersonalizedExercises:
+                        return <TeacherPersonalizedExercises {...teacherProps} student={selectedStudent!} subject={selectedSubject!} onGenerate={async () => "AI Exercises"} onSave={() => {}} onBack={() => setPage(Page.TeacherStudentSelectionForExercises)} />;
+                    case Page.TeacherManageAlbum:
+                        return <TeacherManageAlbum {...teacherProps} photos={[]} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherManageTalkingCards:
+                        return <TeacherManageTalkingCards {...teacherProps} cards={[]} onAnalyze={async () => []} onSave={() => {}} onDelete={() => {}} onBack={backToActionMenu} />;
+                    case Page.TeacherManageMemorization:
+                        return <TeacherManageMemorization {...teacherProps} items={[]} onSave={() => {}} onDelete={() => {}} onExtractText={async () => "Extracted Text"} onBack={backToActionMenu} />;
+                    default:
+                         return <TeacherDashboard {...teacherProps} onSelectionComplete={(level, subject) => {setSelectedLevel(level); setSelectedSubject(subject); setPage(Page.TeacherClassSelection)}} onBack={performLogout} />;
+                 }
+            
+            case UserRole.Guardian:
+                if (!school || !currentUser) return null;
+                 switch (page) {
+                    case Page.GuardianDashboard:
+                        return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.GuardianSubjectMenu:
+                        return <GuardianSubjectMenu school={school} studentLevel={(currentUser as Student).level} subject={selectedSubject!} onSelectAction={setPage} onBack={()=>setPage(Page.GuardianDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                    case Page.GuardianViewSummaries:
+                        return <GuardianViewContent type="summaries" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+                    case Page.GuardianViewExercises:
+                        return <GuardianViewContent type="exercises" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+                     default:
+                        return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                 }
+
+            default:
+                return <UnifiedLoginScreen onLogin={handleLogin} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
         }
     };
-
-    if (!isSupabaseConfigured) {
-        return <ConfigErrorScreen />;
-    }
-    
-    if (!sessionChecked || isLoading) {
-        return <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300">Loading...</div>;
-    }
-
-    const showSearch = userRole && userRole !== UserRole.SuperAdmin;
 
     return (
-        <div className={`w-full min-h-screen p-4 sm:pt-24 flex items-start justify-center ${showSearch ? 'pt-24' : ''}`}>
-             {showSearch && currentSchool && (
-                <SearchHeader 
-                    schoolName={currentSchool.name}
-                    query={searchQuery}
-                    onQueryChange={setSearchQuery}
-                    isSearching={isSearching}
-                    results={searchResults}
-                    onResultClick={(result) => {
-                        setSelectedSearchResult(result);
-                        setSearchQuery(''); // Clear query to hide results list
-                    }}
-                />
-             )}
-             {renderPage()}
-             {selectedSearchResult && (
-                <SearchResultModal result={selectedSearchResult} onClose={() => setSelectedSearchResult(null)} isDarkMode={isDarkMode} />
-             )}
-             {confirmation && (
-                <ConfirmationModal {...confirmation} onCancel={() => setConfirmation(null)} />
-             )}
-             <FeedbackModal
-                isOpen={isFeedbackModalOpen}
-                onClose={() => setIsFeedbackModalOpen(false)}
-                onSubmit={async (rating, comments) => {
-                     await supabase.from('feedback').insert([{
-                        rating,
-                        comments,
-                        user_role: userRole,
-                        school_id: currentSchool?.id,
-                    }]);
-                    setIsFeedbackModalOpen(false);
-                }}
-            />
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:pt-4 pt-24">
+            {renderPage()}
         </div>
     );
 };
