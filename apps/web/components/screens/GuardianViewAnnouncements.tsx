@@ -1,14 +1,15 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Announcement, School } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
 import LanguageSwitcher from '../../../../packages/ui/LanguageSwitcher';
 import ThemeSwitcher from '../../../../packages/ui/ThemeSwitcher';
+import { supabase } from '../../../../packages/core/supabaseClient';
+import { snakeToCamelCase } from '../../../../packages/core/utils';
 
 interface GuardianViewAnnouncementsProps {
-    announcements: Announcement[];
     onBack: () => void;
     onLogout: () => void;
     school: School;
@@ -16,8 +17,31 @@ interface GuardianViewAnnouncementsProps {
     isDarkMode: boolean;
 }
 
-const GuardianViewAnnouncements: React.FC<GuardianViewAnnouncementsProps> = ({ announcements, onBack, onLogout, school, toggleDarkMode, isDarkMode }) => {
+const GuardianViewAnnouncements: React.FC<GuardianViewAnnouncementsProps> = ({ onBack, onLogout, school, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAnnouncements = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase
+                .from('announcements')
+                .select('*')
+                .eq('school_id', school.id)
+                .eq('target_audience', 'guardians')
+                .order('date', { ascending: false });
+
+            if (error) {
+                console.error("Error fetching announcements:", error);
+            } else {
+                setAnnouncements(snakeToCamelCase(data));
+            }
+            setIsLoading(false);
+        };
+        fetchAnnouncements();
+    }, [school.id]);
+
 
     return (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
@@ -30,10 +54,12 @@ const GuardianViewAnnouncements: React.FC<GuardianViewAnnouncementsProps> = ({ a
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('viewAnnouncements')}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('announcements')}</h1>
             
             <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
-                {announcements.length > 0 ? announcements.sort((a,b) => b.date.getTime() - a.date.getTime()).map(ann => (
+                {isLoading ? (
+                    <p className="text-center text-gray-500 dark:text-gray-400">{t('loading')}...</p>
+                ) : announcements.length > 0 ? announcements.map(ann => (
                     <div key={ann.id} className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg shadow-sm border-l-4 border-blue-500 dark:border-blue-400">
                         <p className="whitespace-pre-wrap mb-2 text-gray-800 dark:text-gray-200">{ann.content}</p>
                         {ann.image && <img src={ann.image} alt="attachment" className="mt-2 rounded-lg max-w-full h-auto"/>}

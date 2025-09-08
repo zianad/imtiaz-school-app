@@ -103,6 +103,7 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [session, setSession] = useState<any | null | undefined>(undefined);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
     // Navigation state
     const [selectedStage, setSelectedStage] = useState<EducationalStage | null>(null);
@@ -130,6 +131,7 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setSchool(null);
         setSchools([]);
+        setNotifications([]);
         setSelectedStage(null);
         setSelectedLevel('');
         setSelectedSubject(null);
@@ -259,6 +261,17 @@ const App: React.FC = () => {
         };
     }, []);
     
+    const fetchNotifications = useCallback(async (studentId: string) => {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('date', { ascending: false });
+
+        if (error) console.error("Error fetching notifications:", error);
+        else setNotifications(snakeToCamelCase(data || []));
+    }, []);
+    
     useEffect(() => {
         const processSession = async () => {
             if (session === undefined) return; 
@@ -283,15 +296,16 @@ const App: React.FC = () => {
                             if (fetchedSchool) {
                                 setSchool(fetchedSchool);
                                 
-                                // FIX: Reordered user type detection to avoid RLS errors. Check principal/teacher first.
-                                const principal = (fetchedSchool.principals || []).find((p: Principal) => p.loginCode === code);
-                                if (principal) {
-                                    setUserRole(UserRole.Principal);
-                                    setCurrentUser(principal);
-                                    setPage(Page.PrincipalStageSelection);
+                                const student = (await supabase.from('students').select('*').eq('school_id', schoolId).eq('guardian_code', code).single()).data;
+                                if (student) {
+                                    const studentData = snakeToCamelCase(student) as Student;
+                                    setUserRole(UserRole.Guardian);
+                                    setCurrentUser(studentData);
+                                    await fetchNotifications(studentData.id);
+                                    setPage(Page.GuardianDashboard);
                                     return;
                                 }
-                                
+
                                 const teacher = (fetchedSchool.teachers || []).find(t => t.loginCode === code);
                                 if (teacher) {
                                     setUserRole(UserRole.Teacher);
@@ -299,12 +313,12 @@ const App: React.FC = () => {
                                     setPage(Page.TeacherDashboard);
                                     return;
                                 }
-
-                                const { data: student } = await supabase.from('students').select('*').eq('school_id', schoolId).eq('guardian_code', code).single();
-                                if (student) {
-                                    setUserRole(UserRole.Guardian);
-                                    setCurrentUser(snakeToCamelCase(student));
-                                    setPage(Page.GuardianDashboard);
+                                
+                                const principal = Object.values(fetchedSchool.principals || {}).flat().find((p: Principal) => p.loginCode === code);
+                                if (principal) {
+                                    setUserRole(UserRole.Principal);
+                                    setCurrentUser(principal);
+                                    setPage(Page.PrincipalStageSelection);
                                     return;
                                 }
                                 
@@ -331,7 +345,7 @@ const App: React.FC = () => {
         };
     
         processSession();
-    }, [session, fetchSchoolData, resetAppState, performLogout]);
+    }, [session, fetchSchoolData, resetAppState, performLogout, fetchNotifications]);
     
     const handleTeacherActionNavigation = (nextPage: Page) => {
       const pagesRequiringStudentSelection = [
@@ -353,6 +367,53 @@ const App: React.FC = () => {
       }
     };
     
+    // Guardian Form Handlers
+    const handleSubmitComplaint = async (content: string, file?: { image?: string; pdf?: { name: string; url: string } }) => {
+        if (!school || !currentUser) return;
+        const complaintData = {
+            content, ...file,
+            school_id: school.id,
+            student_id: currentUser.id,
+            date: new Date().toISOString(),
+        };
+        const { error } = await supabase.from('complaints').insert([complaintData]);
+        if (error) alert(error.message);
+        else alert(t('requestSent'));
+    };
+
+    const handleRequestInterview = async () => {
+         if (!school || !currentUser) return;
+        const requestData = {
+            school_id: school.id,
+            student_id: currentUser.id,
+            date: new Date().toISOString(),
+            status: 'pending',
+        };
+        const { error } = await supabase.from('interview_requests').insert([requestData]);
+        if (error) alert(error.message);
+    };
+
+    const handlePayFee = async (month: number, year: number, amount: number) => {
+         if (!school || !currentUser) return;
+        const paymentData = {
+            school_id: school.id,
+            student_id: currentUser.id,
+            amount, month, year,
+            date: new Date().toISOString(),
+        };
+        const { error } = await supabase.from('monthly_fee_payments').insert([paymentData]);
+        if (error) alert(error.message);
+    };
+
+    const handleMarkNotificationsRead = async () => {
+        const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+        if (unreadIds.length > 0) {
+            const { error } = await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+            if (error) console.error("Error marking notifications as read:", error);
+            else await fetchNotifications((currentUser as Student).id);
+        }
+    };
+
     const renderPage = () => {
         if (!isSupabaseConfigured && (import.meta as any).env.PROD) {
             return <ConfigErrorScreen />;
@@ -384,7 +445,7 @@ const App: React.FC = () => {
                  if (!school || !currentUser) return null; 
                 switch (page) {
                     case Page.PrincipalStageSelection:
-                         const accessibleStages = (school.principals || []).filter((p: Principal) => p.id === (currentUser as Principal).id).map((p: Principal) => p.stage);
+                         const accessibleStages = Object.values(school.principals || {}).flat().filter((p: Principal) => p.id === (currentUser as Principal).id).map((p: Principal) => p.stage);
                         return <PrincipalStageSelection school={school} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
                     case Page.PrincipalDashboard:
                         return <PrincipalDashboard school={school} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
@@ -483,17 +544,65 @@ const App: React.FC = () => {
             
             case UserRole.Guardian:
                 if (!school || !currentUser) return null;
+                const guardianProps = { school, student: currentUser as Student, onLogout: performLogout, toggleDarkMode, isDarkMode };
+                const backToDashboard = () => setPage(Page.GuardianDashboard);
+                const backToSubjectMenu = () => setPage(Page.GuardianSubjectMenu);
+
                  switch (page) {
                     case Page.GuardianDashboard:
-                        return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <GuardianDashboard {...guardianProps} notifications={notifications} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} navigateTo={setPage} />;
                     case Page.GuardianSubjectMenu:
-                        return <GuardianSubjectMenu school={school} studentLevel={(currentUser as Student).level} subject={selectedSubject!} onSelectAction={setPage} onBack={()=>setPage(Page.GuardianDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <GuardianSubjectMenu {...guardianProps} studentLevel={(currentUser as Student).level} subject={selectedSubject!} onSelectAction={setPage} onBack={backToDashboard} />;
                     case Page.GuardianViewSummaries:
-                        return <GuardianViewContent type="summaries" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+                        return <GuardianViewContent type="summaries" {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />
                     case Page.GuardianViewExercises:
-                        return <GuardianViewContent type="exercises" school={school} student={currentUser as Student} subject={selectedSubject} onBack={()=>setPage(Page.GuardianSubjectMenu)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+                        return <GuardianViewContent type="exercises" {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />
+                    case Page.GuardianViewNotes:
+                        return <GuardianViewNotes {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    case Page.GuardianViewGrades:
+                        return <GuardianViewGrades {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    case Page.GuardianViewExamProgram:
+                        return <GuardianViewExamProgram {...guardianProps} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewSupplementaryLessons:
+                        return <GuardianViewSupplementaryLessons {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewUnifiedAssessments:
+                        return <GuardianViewUnifiedAssessments {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    case Page.GuardianViewTimetable:
+                        return <GuardianViewTimetable {...guardianProps} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewQuizzes:
+                        return <GuardianViewQuizzes {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewProjects:
+                        return <GuardianViewProjects {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewLibrary:
+                        return <GuardianViewLibrary {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    // FIX: The 'subject' prop was missing and is required by the component. It has been added to ensure the component receives the necessary data.
+                    case Page.GuardianViewPersonalizedExercises:
+                        return <GuardianViewPersonalizedExercises {...guardianProps} subject={selectedSubject} onBack={backToSubjectMenu} />;
+                    case Page.GuardianNotifications:
+                        return <GuardianNotifications {...guardianProps} notifications={notifications} onMarkRead={handleMarkNotificationsRead} onBack={backToDashboard} />;
+                    case Page.GuardianViewAnnouncements:
+                        return <GuardianViewAnnouncements {...guardianProps} onBack={backToDashboard} />;
+                    case Page.GuardianViewEducationalTips:
+                        return <GuardianViewEducationalTips {...guardianProps} onBack={backToDashboard} />;
+                    case Page.GuardianSubmitComplaint:
+                        return <GuardianSubmitComplaint {...guardianProps} onSubmit={handleSubmitComplaint} onBack={backToDashboard} />;
+                    case Page.GuardianMonthlyFees:
+                        return <GuardianMonthlyFees {...guardianProps} onPay={handlePayFee} onBack={backToDashboard} />;
+                    case Page.GuardianRequestInterview:
+                        return <GuardianRequestInterview {...guardianProps} onRequest={handleRequestInterview} onBack={backToDashboard} />;
+                    case Page.GuardianViewAlbum:
+                        return <GuardianViewAlbum {...guardianProps} onBack={backToDashboard} />;
+                    case Page.GuardianViewTalkingCards:
+                        return <GuardianViewTalkingCards {...guardianProps} onBack={backToDashboard} />;
+                    case Page.GuardianViewMemorization:
+                        return <GuardianViewMemorization {...guardianProps} onBack={backToDashboard} />;
                      default:
-                        return <GuardianDashboard school={school} student={currentUser as Student} notifications={[]} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} onLogout={performLogout} navigateTo={setPage} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <GuardianDashboard {...guardianProps} notifications={notifications} onSelectSubject={(sub) => {setSelectedSubject(sub); setPage(Page.GuardianSubjectMenu)}} navigateTo={setPage} />;
                  }
 
             default:

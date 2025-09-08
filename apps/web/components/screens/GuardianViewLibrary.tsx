@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { LibraryItem, Student, Subject, School } from '../../../../packages/core/types';
+import { LibraryItem, School, Student, Subject } from '../../../../packages/core/types';
 import { useTranslation } from '../../../../packages/core/i18n';
 import BackButton from '../../../../packages/ui/BackButton';
 import LogoutButton from '../../../../packages/ui/LogoutButton';
@@ -10,16 +9,16 @@ import { supabase } from '../../../../packages/core/supabaseClient';
 import { snakeToCamelCase } from '../../../../packages/core/utils';
 
 interface GuardianViewLibraryProps {
+    school: School;
     student: Student;
     subject: Subject | null;
-    school: School;
     onBack: () => void;
     onLogout: () => void;
     toggleDarkMode: () => void;
     isDarkMode: boolean;
 }
 
-const GuardianViewLibrary: React.FC<GuardianViewLibraryProps> = ({ student, subject, school, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
+const GuardianViewLibrary: React.FC<GuardianViewLibraryProps> = ({ school, student, subject, onBack, onLogout, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
     const [items, setItems] = useState<LibraryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,22 +31,21 @@ const GuardianViewLibrary: React.FC<GuardianViewLibraryProps> = ({ student, subj
                 .from('library_items')
                 .select('*')
                 .eq('school_id', school.id)
-                .eq('subject', subject)
                 .eq('level', student.level)
+                .eq('subject', subject)
                 .order('date', { ascending: false });
 
-            if (error) {
-                console.error("Error fetching library items:", error);
-            } else {
-                setItems(snakeToCamelCase(data));
-            }
+            if (error) console.error("Error fetching library items:", error);
+            else setItems(snakeToCamelCase(data));
             setIsLoading(false);
         };
         fetchItems();
     }, [school.id, student.level, subject]);
 
+    const sortedItems = items;
+
     return (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 dark:border-blue-500 w-full relative">
+        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-600 w-full relative">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                     {school.logoUrl && <img src={school.logoUrl} alt={`${school.name} Logo`} className="w-12 h-12 rounded-full object-contain shadow-sm bg-white" />}
@@ -57,28 +55,32 @@ const GuardianViewLibrary: React.FC<GuardianViewLibraryProps> = ({ student, subj
                     <ThemeSwitcher toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
                 </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">{t('digitalLibrary')}</h1>
-
-            <div className="w-full min-h-[400px] max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-gray-700/50 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                {isLoading ? <p>{t('loading')}...</p> : items.length > 0 ? (
-                    <div className="space-y-3">
-                        {items.map(item => (
-                            <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                                <h2 className="font-bold text-xl text-blue-700 dark:text-blue-400 mb-2">{item.title}</h2>
-                                <p className="text-gray-600 dark:text-gray-300 mb-3">{item.description}</p>
-                                <a href={item.file.url} download={item.file.name} className="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600">
-                                    {t('download')} PDF
+            <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">{t('digitalLibrary')}</h1>
+            
+            <div className="max-h-[70vh] overflow-y-auto space-y-3 p-2 bg-gray-50 rounded-lg">
+                {isLoading ? <p>{t('loading')}...</p> : sortedItems.length > 0 ? (
+                    sortedItems.map(item => (
+                        <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+                           <div className="flex justify-between items-center gap-4">
+                               <div className="flex-grow">
+                                    <h2 className="font-bold text-lg text-blue-700">{item.title}</h2>
+                                    {item.description && <p className="text-sm text-gray-600 mt-1">{item.description}</p>}
+                               </div>
+                               <a 
+                                    href={item.file.url} 
+                                    download={item.file.name}
+                                    className="bg-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-600 transition shadow-md flex-shrink-0"
+                                >
+                                    {t('download')}
                                 </a>
-                            </div>
-                        ))}
-                    </div>
+                           </div>
+                        </div>
+                    ))
                 ) : (
-                     <div className="flex items-center justify-center h-full">
-                        <p className="text-gray-500 dark:text-gray-400 text-lg">{t('noBooks')}</p>
-                    </div>
+                    <p className="text-center text-gray-500 py-10">{t('noBooks')}</p>
                 )}
             </div>
-            
+
             <div className="mt-8 flex items-center gap-4">
                 <BackButton onClick={onBack} />
                 <LogoutButton onClick={onLogout} />

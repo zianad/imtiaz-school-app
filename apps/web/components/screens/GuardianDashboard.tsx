@@ -20,7 +20,7 @@ interface GuardianDashboardProps {
 
 const GuardianDashboard: React.FC<GuardianDashboardProps> = ({ student, school, onSelectSubject, onLogout, navigateTo, notifications, toggleDarkMode, isDarkMode }) => {
     const { t } = useTranslation();
-    const unreadCount = notifications.filter(n => n.studentId === student.id && !n.read).length;
+    const unreadCount = notifications.filter(n => !n.read).length;
 
     const availableSubjects = STAGE_DETAILS[student.stage]?.subjects || [];
 
