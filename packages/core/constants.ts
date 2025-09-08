@@ -5,7 +5,7 @@ export const SUPER_ADMIN_LOGIN_CODE = "Lunallena11241984";
 // The email for the super admin user in Supabase Auth.
 export const SUPER_ADMIN_EMAIL = "lunallena11241984@superadmin.com";
 // IMPORTANT: The password for the super admin. This MUST match the password set in the Supabase dashboard.
-export const SUPER_ADMIN_PASSWORD = "Lunallena11241984";
+export const SUPER_ADMIN_PASSWORD = "ImtiazApp_Lunallena11241984_S3cure!";
 
 export const HELP_PHONE_NUMBER = "+213123456789"; // Example phone number
 

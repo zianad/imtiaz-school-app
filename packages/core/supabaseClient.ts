@@ -52,10 +52,10 @@ const authListeners: ((event: string, session: any) => void)[] = [];
 const findUser = (code: string) => {
     // Super admin is handled separately in the signInWithPassword mock
     for (const school of mockDataStore.schools) {
-        const student = school.students.find(s => s.guardianCode === code);
+        const student = (school.students || []).find(s => s.guardianCode === code);
         if (student) return { role: UserRole.Guardian, school, user: student };
 
-        const teacher = school.teachers.find(t => t.loginCode === code);
+        const teacher = (school.teachers || []).find(t => t.loginCode === code);
         if (teacher) return { role: UserRole.Teacher, school, user: teacher };
 
         for (const stage in school.principals) {
@@ -87,8 +87,8 @@ const mockSupabaseClient = {
                 // Logic for other users
                 const emailPrefix = email.split('@')[0];
                 const userMatch = findUser(emailPrefix);
-                // For regular users, password is their login/guardian code
-                if (userMatch && password === emailPrefix) {
+                // FIX: The mock client's password check for regular users was incorrect. It now matches the complex password structure used in App.tsx.
+                if (userMatch && password === `ImtiazApp_${emailPrefix}_S3cure!`) {
                     mockSession = { user: { id: emailPrefix, email: email }, expires_in: 3600 };
                     authListeners.forEach(cb => cb('SIGNED_IN', mockSession));
                     resolve({ data: { session: mockSession }, error: null });
