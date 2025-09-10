@@ -114,6 +114,9 @@ const App: React.FC = () => {
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [nextPageAfterStudentSelection, setNextPageAfterStudentSelection] = useState<Page | null>(null);
     
+    // Impersonation state
+    const [impersonationReturnPage, setImpersonationReturnPage] = useState<Page | null>(null);
+
     // Modal State
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [confirmationModalConfig, setConfirmationModalConfig] = useState({ title: '', message: '', onConfirm: () => {} });
@@ -143,6 +146,7 @@ const App: React.FC = () => {
         setSelectedClass('');
         setSelectedStudent(null);
         setNextPageAfterStudentSelection(null);
+        setImpersonationReturnPage(null);
     }, []);
     
     const performLogout = useCallback(async () => {
@@ -544,6 +548,36 @@ const App: React.FC = () => {
             alert(`Error updating principal code: ${error.message}`);
         }
     };
+    
+    const handleEnterAsPrincipal = (page: Page, stage: EducationalStage) => {
+        if (!school) return;
+        const principalForStage = (school.principals[stage] || [])[0];
+
+        if (principalForStage) {
+            setImpersonationReturnPage(Page.SuperAdminSchoolManagement);
+            setUserRole(UserRole.Principal);
+            setCurrentUser(principalForStage);
+            setSelectedStage(stage);
+            setPage(page);
+        } else {
+            alert(t('noPrincipalForStage', { stageName: t(`${stage.toLowerCase()}Stage` as any) }));
+        }
+    };
+
+    const stopImpersonation = () => {
+        if (impersonationReturnPage) {
+            const userEmail = session?.user?.email;
+            if (userEmail === SUPER_ADMIN_EMAIL) {
+                setUserRole(UserRole.SuperAdmin);
+                setCurrentUser({ id: 'superadmin', name: 'Super Admin' } as any);
+                setPage(impersonationReturnPage);
+                setImpersonationReturnPage(null);
+                setSelectedStage(null);
+            } else {
+                performLogout();
+            }
+        }
+    };
 
 
     const renderPage = () => {
@@ -560,7 +594,7 @@ const App: React.FC = () => {
                 case Page.SuperAdminDashboard:
                     return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={handleAddSchool} onDeleteSchool={handleDeleteSchool} onManageSchool={handleManageSchool} />;
                 case Page.SuperAdminSchoolManagement:
-                    return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={(id, name, logo) => handleUpdateSchool({ ...school!, name, logoUrl: logo })} onToggleStatus={() => handleUpdateSchool({ ...school!, isActive: !school!.isActive })} onToggleStage={(stage) => { const newStages = (school!.stages || []).includes(stage) ? (school!.stages || []).filter(s => s !== stage) : [...(school!.stages || []), stage]; handleUpdateSchool({ ...school!, stages: newStages }); }} onToggleFeatureFlag={(feature) => { const newFlags = { ...(school!.featureFlags || {}), [feature]: !(school!.featureFlags || {})[feature] }; handleUpdateSchool({ ...school!, featureFlags: newFlags }); }} onEnterFeaturePage={()=>{}} onAddPrincipal={onAddPrincipal} onDeletePrincipal={onDeletePrincipal} onUpdatePrincipalCode={onUpdatePrincipalCode} />;
+                    return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={(id, name, logo) => handleUpdateSchool({ ...school!, name, logoUrl: logo })} onToggleStatus={() => handleUpdateSchool({ ...school!, isActive: !school!.isActive })} onToggleStage={(stage) => { const newStages = (school!.stages || []).includes(stage) ? (school!.stages || []).filter(s => s !== stage) : [...(school!.stages || []), stage]; handleUpdateSchool({ ...school!, stages: newStages }); }} onToggleFeatureFlag={(feature) => { const newFlags = { ...(school!.featureFlags || {}), [feature]: !(school!.featureFlags || {})[feature] }; handleUpdateSchool({ ...school!, featureFlags: newFlags }); }} onEnterFeaturePage={handleEnterAsPrincipal} onAddPrincipal={onAddPrincipal} onDeletePrincipal={onDeletePrincipal} onUpdatePrincipalCode={onUpdatePrincipalCode} />;
                  case Page.SuperAdminFeedbackAnalysis:
                     return <SuperAdminFeedbackAnalysis schools={schools} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} onAnalyze={async () => "AI analysis"} />;
                 default:
@@ -580,7 +614,7 @@ const App: React.FC = () => {
                          const accessibleStages = Object.values(school.principals || {}).flat().filter((p: Principal) => p.id === (currentUser as Principal).id).map((p: Principal) => p.stage);
                         return <PrincipalStageSelection school={school} accessibleStages={accessibleStages} onSelectStage={(stage) => { setSelectedStage(stage); setPage(Page.PrincipalDashboard); }} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onBack={performLogout} />;
                     case Page.PrincipalDashboard:
-                        return <PrincipalDashboard school={school} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={() => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
+                        return <PrincipalDashboard school={school} stage={selectedStage!} onSelectAction={setPage} onLogout={performLogout} onBack={impersonationReturnPage ? stopImpersonation : () => setPage(Page.PrincipalStageSelection)} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalManagementMenu:
                         return <PrincipalManagementMenu school={school} stage={selectedStage!} onSelectAction={setPage} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalManageStudents:

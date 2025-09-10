@@ -278,6 +278,7 @@ const resources = {
       importReport: "اكتمل الاستيراد.\nالناجحة: {{successCount}} / {{total}}\nالفاشلة: {{errorCount}} / {{total}}\n\nالتفاصيل:\n{{errors}}",
       importMissingData: "بيانات ناقصة في الصف",
       guardianCodeInUseError: "رمز ولي الأمر '{{code}}' مستخدم بالفعل.",
+      noPrincipalForStage: "لا يوجد مدير معين لهذه المرحلة: {{stageName}}",
 
        // Super Admin
       superAdminDashboardTitle: "لوحة تحكم المدير الخارق",
