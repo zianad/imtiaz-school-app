@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page, UserRole, School, Student, Teacher, Principal, Subject, EducationalStage, Note, Announcement, Complaint, EducationalTip, MonthlyFeePayment, InterviewRequest, Summary, Exercise, ExamProgram, Notification, SupplementaryLesson, Timetable, Quiz, Project, LibraryItem, AlbumPhoto, PersonalizedExercise, UnifiedAssessment, TalkingCard, MemorizationItem, Feedback, Expense, SearchResult, SchoolFeature, SearchableContent, Absence, Grade } from '../../packages/core/types';
 import { supabase, isSupabaseConfigured } from '../../packages/core/supabaseClient';
-import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '../../packages/core/constants';
+import { SUPER_ADMIN_LOGIN_CODE, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, ALL_FEATURES_ENABLED } from '../../packages/core/constants';
 import { useTranslation } from '../../packages/core/i18n';
 import { snakeToCamelCase, camelToSnakeCase } from '../../packages/core/utils';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -76,6 +76,7 @@ import GuardianViewMemorization from './components/screens/GuardianViewMemorizat
 import PrincipalFinancialDashboard from './components/screens/PrincipalFinancialDashboard';
 import FeedbackModal from './components/FeedbackModal';
 import TeacherViewAnnouncements from './components/screens/TeacherViewAnnouncements';
+import ConfirmationModal from './components/common/ConfirmationModal';
 
 const App: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -112,6 +113,10 @@ const App: React.FC = () => {
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [nextPageAfterStudentSelection, setNextPageAfterStudentSelection] = useState<Page | null>(null);
+    
+    // Modal State
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = useState({ title: '', message: '', onConfirm: () => {} });
 
     const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
@@ -414,6 +419,133 @@ const App: React.FC = () => {
         }
     };
 
+    // Super Admin Handlers
+    const handleAddSchool = async (name: string, principalCode: string, logoUrl: string) => {
+        setIsLoading(true);
+        try {
+            const { data: schoolData, error: schoolError } = await supabase
+                .from('schools')
+                .insert([{ name, logo_url: logoUrl, is_active: true, stages: [EducationalStage.PRIMARY], feature_flags: ALL_FEATURES_ENABLED }])
+                .select().single();
+
+            if (schoolError) throw schoolError;
+            const newSchoolId = schoolData.id;
+
+            const { error: principalError } = await supabase
+                .from('principals')
+                .insert([{ name: 'مدير عام', login_code: principalCode, stage: EducationalStage.PRIMARY, school_id: newSchoolId }]);
+            if (principalError) throw principalError;
+
+            const email = `${principalCode}@${newSchoolId}.com`;
+            const password = `ImtiazApp_${principalCode}_S3cure!`;
+            const { error: signUpError } = await supabase.auth.signUp({ email, password });
+            if (signUpError) console.error("Sign up failed for new principal", signUpError);
+
+            const { data: schoolsData, error: refetchError } = await supabase.from('schools').select('*, principals(*)');
+            if (refetchError) throw refetchError;
+            setSchools(snakeToCamelCase(schoolsData));
+        } catch (error: any) {
+            alert(`Error adding school: ${error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteSchool = (schoolId: string, schoolName: string) => {
+        setConfirmationModalConfig({
+            title: t('confirmDeleteSchoolTitle', { name: schoolName }),
+            message: t('confirmDeleteSchoolMessage'),
+            onConfirm: async () => {
+                setIsLoading(true);
+                try {
+                    const { error } = await supabase.from('schools').delete().match({ id: schoolId });
+                    if (error) throw error;
+                    setSchools(prev => prev.filter(s => s.id !== schoolId));
+                } catch (error: any) {
+                    alert(`Error deleting school: ${error.message}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }
+        });
+        setIsConfirmationModalOpen(true);
+    };
+
+    const handleManageSchool = (schoolId: string) => {
+        const schoolToManage = schools.find(s => s.id === schoolId);
+        if (schoolToManage) {
+            setSchool(schoolToManage);
+            setPage(Page.SuperAdminSchoolManagement);
+        }
+    };
+    
+    const handleUpdateSchool = async (updatedSchool: School) => {
+        try {
+            const snakeCaseSchool = camelToSnakeCase(updatedSchool);
+            // Supabase client might not handle nested objects well in update, so we handle principals separately if needed,
+            // but for simple fields like name, logo_url, stages, feature_flags, it should be fine.
+            const { id, principals, teachers, students, ...updateData } = snakeCaseSchool;
+
+            const { error } = await supabase.from('schools').update(updateData).match({ id: updatedSchool.id });
+            if (error) throw error;
+
+            setSchool(updatedSchool);
+            setSchools(prev => prev.map(s => s.id === updatedSchool.id ? updatedSchool : s));
+        } catch (error: any) {
+            alert(`Error updating school: ${error.message}`);
+        }
+    };
+    
+    const onAddPrincipal = async (stage: EducationalStage, name: string, loginCode: string) => {
+        if (!school) return;
+        try {
+            const { error: principalError } = await supabase.from('principals').insert([{ name, login_code: loginCode, stage, school_id: school.id }]);
+            if (principalError) throw principalError;
+
+            const email = `${loginCode}@${school.id}.com`;
+            const password = `ImtiazApp_${loginCode}_S3cure!`;
+            const { error: signUpError } = await supabase.auth.signUp({ email, password });
+            if (signUpError) console.error("Sign up failed for new principal", signUpError);
+
+            const updatedSchoolData = await fetchSchoolData(school.id);
+            if (updatedSchoolData) handleUpdateSchool(updatedSchoolData);
+        } catch(error: any) {
+            alert(`Error adding principal: ${error.message}`);
+        }
+    };
+
+    const onDeletePrincipal = (stage: EducationalStage, principalId: string, principalName: string) => {
+         if (!school) return;
+        setConfirmationModalConfig({
+            title: t('confirmDeletePrincipalTitle', { name: principalName }),
+            message: t('confirmDeletePrincipalMessage'),
+            onConfirm: async () => {
+                try {
+                    const { error } = await supabase.from('principals').delete().match({ id: principalId });
+                    if (error) throw error;
+                    const updatedSchoolData = await fetchSchoolData(school.id);
+                    if (updatedSchoolData) handleUpdateSchool(updatedSchoolData);
+                } catch (error: any) {
+                    alert(`Error deleting principal: ${error.message}`);
+                }
+            }
+        });
+        setIsConfirmationModalOpen(true);
+    };
+    
+    const onUpdatePrincipalCode = async (stage: EducationalStage, principalId: string, newCode: string) => {
+        if (!school) return;
+        try {
+            const { error } = await supabase.from('principals').update({ login_code: newCode }).match({ id: principalId });
+            if (error) throw error;
+            const updatedSchoolData = await fetchSchoolData(school.id);
+            if (updatedSchoolData) handleUpdateSchool(updatedSchoolData);
+        } catch (error: any) {
+            alert(`Error updating principal code: ${error.message}`);
+        }
+    };
+
+
     const renderPage = () => {
         if (!isSupabaseConfigured && (import.meta as any).env.PROD) {
             return <ConfigErrorScreen />;
@@ -426,13 +558,13 @@ const App: React.FC = () => {
         if (userRole === UserRole.SuperAdmin) {
             switch (page) {
                 case Page.SuperAdminDashboard:
-                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
+                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={handleAddSchool} onDeleteSchool={handleDeleteSchool} onManageSchool={handleManageSchool} />;
                 case Page.SuperAdminSchoolManagement:
-                    return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={()=>{}} onToggleStatus={()=>{}} onToggleStage={()=>{}} onToggleFeatureFlag={()=>{}} onEnterFeaturePage={()=>{}} onAddPrincipal={()=>{}} onDeletePrincipal={()=>{}} onUpdatePrincipalCode={()=>{}} />;
+                    return <SuperAdminSchoolManagement school={school!} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} onUpdateSchoolDetails={(id, name, logo) => handleUpdateSchool({ ...school!, name, logoUrl: logo })} onToggleStatus={() => handleUpdateSchool({ ...school!, isActive: !school!.isActive })} onToggleStage={(stage) => { const newStages = (school!.stages || []).includes(stage) ? (school!.stages || []).filter(s => s !== stage) : [...(school!.stages || []), stage]; handleUpdateSchool({ ...school!, stages: newStages }); }} onToggleFeatureFlag={(feature) => { const newFlags = { ...(school!.featureFlags || {}), [feature]: !(school!.featureFlags || {})[feature] }; handleUpdateSchool({ ...school!, featureFlags: newFlags }); }} onEnterFeaturePage={()=>{}} onAddPrincipal={onAddPrincipal} onDeletePrincipal={onDeletePrincipal} onUpdatePrincipalCode={onUpdatePrincipalCode} />;
                  case Page.SuperAdminFeedbackAnalysis:
                     return <SuperAdminFeedbackAnalysis schools={schools} onBack={() => setPage(Page.SuperAdminDashboard)} onLogout={performLogout} onAnalyze={async () => "AI analysis"} />;
                 default:
-                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={()=>{}} onDeleteSchool={()=>{}} onManageSchool={()=>{}} />;
+                    return <SuperAdminDashboard schools={schools} onLogout={performLogout} onNavigate={setPage} onAddSchool={handleAddSchool} onDeleteSchool={handleDeleteSchool} onManageSchool={handleManageSchool} />;
             }
         }
 
@@ -612,6 +744,13 @@ const App: React.FC = () => {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:pt-4 pt-24">
+            <ConfirmationModal 
+                isOpen={isConfirmationModalOpen}
+                title={confirmationModalConfig.title}
+                message={confirmationModalConfig.message}
+                onConfirm={confirmationModalConfig.onConfirm}
+                onCancel={() => setIsConfirmationModalOpen(false)}
+            />
             {renderPage()}
         </div>
     );
