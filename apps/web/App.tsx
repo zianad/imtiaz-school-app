@@ -115,6 +115,7 @@ const App: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [session, setSession] = useState<any | null | undefined>(undefined);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [educationalTips, setEducationalTips] = useState<EducationalTip[]>([]);
 
     // Navigation state
     const [selectedStage, setSelectedStage] = useState<EducationalStage | null>(null);
@@ -150,6 +151,7 @@ const App: React.FC = () => {
         setSchool(null);
         setSchools([]);
         setNotifications([]);
+        setEducationalTips([]);
         setSelectedStage(null);
         setSelectedLevel('');
         setSelectedSubject(null);
@@ -291,6 +293,21 @@ const App: React.FC = () => {
         else setNotifications(snakeToCamelCase(data || []));
     }, []);
     
+    const fetchEducationalTips = useCallback(async (schoolId: string) => {
+        if (!isSupabaseConfigured) return;
+        const { data, error } = await supabase
+            .from('educational_tips')
+            .select('*')
+            .eq('school_id', schoolId)
+            .order('date', { ascending: false });
+        
+        if (error) {
+            console.error('Error fetching educational tips:', error);
+        } else {
+            setEducationalTips(snakeToCamelCase(data || []));
+        }
+    }, []);
+    
     useEffect(() => {
         const processSession = async () => {
             if (session === undefined) return; 
@@ -365,6 +382,12 @@ const App: React.FC = () => {
     
         processSession();
     }, [session, fetchSchoolData, resetAppState, performLogout, fetchNotifications]);
+    
+     useEffect(() => {
+        if (userRole === UserRole.Principal && page === Page.PrincipalDashboard && school) {
+            fetchEducationalTips(school.id);
+        }
+    }, [userRole, page, school, fetchEducationalTips]);
     
     const handleTeacherActionNavigation = (nextPage: Page) => {
       const pagesRequiringStudentSelection = [
@@ -638,7 +661,46 @@ const App: React.FC = () => {
                     case Page.PrincipalAnnouncements:
                         return <PrincipalAnnouncements school={school} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} announcements={[]} teachers={[]} onAddAnnouncement={() => {}} />;
                     case Page.PrincipalEducationalTips:
-                        return <PrincipalEducationalTips school={school} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} tips={[]} onAddTip={() => {}} onGenerateAITip={async () => "AI Tip"} />;
+                        return <PrincipalEducationalTips 
+                            school={school} 
+                            onBack={() => setPage(Page.PrincipalDashboard)} 
+                            onLogout={performLogout} 
+                            toggleDarkMode={toggleDarkMode} 
+                            isDarkMode={isDarkMode} 
+                            tips={educationalTips}
+                            onAddTip={async ({ content }) => {
+                                if (!school) return;
+                                const { error } = await supabase.from('educational_tips').insert([
+                                    { content, school_id: school.id, date: new Date().toISOString() }
+                                ]);
+                                if (error) {
+                                    console.error("Error adding educational tip:", error);
+                                    alert(`Error: ${error.message}`);
+                                } else {
+                                    alert("تم إرسال النصيحة بنجاح!");
+                                    await fetchEducationalTips(school.id);
+                                }
+                            }}
+                            onGenerateAITip={async () => {
+                                const apiKey = (import.meta as any).env.VITE_API_KEY;
+                                if (!apiKey) {
+                                    throw new Error("VITE_API_KEY is not configured.");
+                                }
+                                const ai = new GoogleGenAI({ apiKey });
+                                const prompt = "اكتب نصيحة تربوية قصيرة ومفيدة للمعلمين أو أولياء الأمور حول تحسين تجربة تعلم الطلاب باللغة العربية.";
+                                
+                                try {
+                                    const response = await ai.models.generateContent({
+                                        model: 'gemini-2.5-flash',
+                                        contents: prompt,
+                                    });
+                                    return response.text;
+                                } catch (e) {
+                                    console.error("Gemini API error:", e);
+                                    throw new Error("Failed to generate tip from AI.");
+                                }
+                            }} 
+                        />;
                     case Page.PrincipalPerformanceTracking:
                         return <PrincipalPerformanceTracking school={school} stage={selectedStage!} students={[]} onBack={() => setPage(Page.PrincipalDashboard)} onLogout={performLogout} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />;
                     case Page.PrincipalReviewNotes:
